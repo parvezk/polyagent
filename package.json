@@ -1,0 +1,37 @@
+{
+  "name": "polyagent.pro",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "build": "tsc",
+    "dev": "tsx src/cli.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/parvezk/polyagent.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/parvezk/polyagent/issues"
+  },
+  "homepage": "https://github.com/parvezk/polyagent#readme",
+  "type": "module",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.105.0",
+    "commander": "^15.0.0",
+    "dotenv": "^17.4.2"
+  },
+  "devDependencies": {
+    "@types/node": "^26.0.0",
+    "tsx": "^4.22.4",
+    "typescript": "^6.0.3",
+    "vitest": "^3.2.6"
+  }
+}
