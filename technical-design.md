@@ -20,13 +20,17 @@ A vendor-adapter pattern normalizes every platform into a common interface. **Po
 
 | Vendor | Dispatch | Track by ID | Follow-up | Surface | Maturity | V1? |
 |---|---|---|---|---|---|---|
-| **Cursor** | ✅ `POST /v1/agents` | ✅ poll runs + SSE | ✅ `POST /agents/{id}/runs` | Official `@cursor/sdk` (TS) | Beta | **Yes** |
-| **Claude** | ✅ Managed Agents `POST /v1/sessions` (cloud) | ✅ poll + SSE | ✅ `POST /sessions/{id}/events` | Official `anthropic` SDK (`beta.agents`) | Beta | **Yes** |
-| **Jules** | ✅ `POST /v1alpha/sessions` | ✅ poll session + activities | ✅ `:sendMessage` | REST + Jules Tools CLI | v1alpha | V2 |
-| **Gemini / Antigravity** | ✅ Interactions API (`background=true`) | ✅ poll by `interaction.id` | ✅ `previous_interaction_id` | REST | Preview | V2 |
+| **Claude** | ✅ Managed Agents `POST /v1/sessions` (cloud) | ✅ poll + SSE | ✅ `POST /sessions/{id}/events` | Official `anthropic` SDK (`beta.agents`) | Beta | **Yes (V1)** |
+| **Jules** | ✅ `POST /v1alpha/sessions` | ✅ poll session + activities | ✅ `:sendMessage` | Raw REST (`X-Goog-Api-Key`) + CLI | v1alpha | **Yes (V1)** |
+| **Gemini / Antigravity** | ✅ Interactions API (`background=true`) | ✅ poll by `interaction.id` | ✅ `previous_interaction_id` | REST + `@google/genai` SDK | Preview | V2 |
+| **Cursor** | ✅ `POST /v1/agents` | ✅ poll runs + SSE | ✅ `POST /agents/{id}/runs` | Official `@cursor/sdk` (TS) | Beta | Deferred |
 | **Codex** | ⚠️ CLI only (`codex cloud exec`) | ⚠️ CLI only | ❌ none | CLI shelling + ChatGPT login | partial | **Omitted** |
 
-**Codex is omitted.** It has no public REST/SDK — the only programmatic path is shelling out to the `codex` CLI, which authenticates via a logged-in ChatGPT browser session (cookies, not an API key) and has no programmatic follow-up. It can't run headless on a server and breaks the clean "API key per vendor" model. Revisit if/when OpenAI ships a public cloud-agent API.
+**V1 pair = Claude + Jules** — a deliberate *managed-agent SDK* (Claude) + *raw-API* (Jules) split, and a *general-sandbox* + *repo→PR* shape contrast that stress-tests the abstraction.
+
+**Cursor is deferred** (not omitted): its Cloud Agents API requires a **paid Pro account** ($20/mo) — confirmed in-dashboard ("Cloud Agents requires a Pro Account"). It slots into the same adapter shape as Jules whenever a subscription is in place.
+
+**Codex is omitted.** It has no public REST/SDK — the only programmatic path is shelling out to the `codex` CLI, which authenticates via a logged-in ChatGPT browser session (cookies, not an API key) and has no programmatic follow-up. It can't run headless and breaks the clean "API key per vendor" model. Revisit if/when OpenAI ships a public cloud-agent API.
 
 **Note on "dispatch" shape:** Cursor and Jules are repo→PR coding agents (clone a repo, work in a sandbox, open a PR). Claude Managed Agents and Gemini Interactions API are general code-execution agents in an ephemeral sandbox that may not produce a PR. The common interface must flex for both — see `outputUrl` below.
 
@@ -34,13 +38,14 @@ A vendor-adapter pattern normalizes every platform into a common interface. **Po
 
 ## V1 Scope
 
-**Two vendors, one loop, end-to-end.** Cursor + Claude. Proving the loop on *two* vendors (not one) is what validates the cross-vendor normalization — one vendor proves nothing about the abstraction.
+**Two vendors, one loop, end-to-end.** Claude + Jules. Proving the loop on *two* vendors (not one) is what validates the cross-vendor normalization — one vendor proves nothing about the abstraction.
 
-Three steps, built and verified incrementally:
+Two steps, built and verified incrementally (follow-up is V3):
 
 1. **Dispatch + first handshake** — `polyagent dispatch` starts a session and returns the session ID + first agent response.
-2. **Live status** — `polyagent status` polls real status of the live session.
-3. **Follow-up** — `polyagent followup <id> "…"` lands a mid-task message (lowest priority of the three; slips to V2 cleanly if the timeline squeezes, since it isn't needed to prove normalization).
+2. **Live status** — `polyagent status` polls real status of the live session, unified across both vendors.
+
+Keys load from `.env.local` (`ANTHROPIC_API_KEY`, `JULES_API_KEY`). See the full task breakdown in `docs/plans/2026-06-23-polyagent-mvp.md`.
 
 **Target:** working loop on both vendors before *Built in NYC with Vercel* (2026-06-27).
 
@@ -48,13 +53,13 @@ Three steps, built and verified incrementally:
 
 ## Architecture Overview
 
-### V1 (Dispatch + Track + Follow-up, two vendors)
+### V1 (Dispatch + Track, two vendors)
 
 ```
 ┌──────────────────────────────────────────────────────────┐
 │                   Human Operator                          │
 │                 (CLI — polyagent)                         │
-│        auth / dispatch / status / followup / output       │
+│              dispatch / status / output                   │
 └───────────────────────────┬──────────────────────────────┘
                             │
            ┌────────────────▼────────────────┐
@@ -63,26 +68,28 @@ Three steps, built and verified incrementally:
            └──────┬───────────────────┬───────┘
                   │                   │
             ┌─────▼─────┐       ┌─────▼─────┐
-            │  Cursor   │       │  Claude   │
+            │  Claude   │       │   Jules   │
             │  Adapter  │       │  Adapter  │
             └─────┬─────┘       └─────┬─────┘
                   │                   │
-            @cursor/sdk        anthropic SDK
-            (REST + SSE)       (Managed Agents,
-                                REST + SSE)
+            anthropic SDK       raw REST fetch
+            (Managed Agents,    (v1alpha,
+             SDK + SSE)          X-Goog-Api-Key)
 ```
 
-Local state: a single JSON file (`~/.polyagent/state.json`). No server, no daemon.
+Local state: a single JSON file. No server, no daemon. Keys from `.env.local`.
 
 ### V2 (More vendors + orchestration)
 
-- Add **Jules** and **Gemini/Antigravity** adapters.
+- Add **Gemini/Antigravity** adapter (Interactions API — opens AI Studio / Vertex / multimodal + long-running workflows).
 - `polyagent broadcast` — message all running agents at once.
 - Shared task context / knowledge base across agents.
+- A simple **Next.js web UI** over the same adapters/state.
 - State upgrade path: SQLite, then Supabase Postgres when persistence / multi-device / dashboard arrives.
 
-### V3 (Intelligence + visibility)
+### V3 (Follow-up + intelligence + visibility)
 
+- **Follow-up across all 3 vendors** — `polyagent followup <id> "…"` (`sendFollowup` is already in the adapter contract; both Claude and Jules ports support it).
 - Lead agent (Claude as chief of staff) — auto-routes tasks to the best-fit vendor.
 - Web dashboard + mobile: 30,000-foot view, timeline, cost tracking. **This is where a real-time push layer (SSE or WebSocket) between the PolyAgent server and its own UI clients belongs** — vendor-facing we are constrained to vendors' REST + SSE today.
 - Benchmarking: same task across vendors, compared.
@@ -190,46 +197,44 @@ A single flat JSON file at `~/.polyagent/state.json`. Zero infrastructure, zero 
 ## CLI Interface (V1)
 
 ```bash
-# Setup — store an API key per vendor
-polyagent auth --vendor cursor --key <api-key>
-polyagent auth --vendor claude --key <api-key>
+# Setup — keys live in .env.local (ANTHROPIC_API_KEY, JULES_API_KEY); no auth command
 
 # Dispatch a new agent (the primary on-ramp)
-polyagent dispatch --vendor cursor --repo parvez/app "Fix the auth bug in /api/login"
+polyagent dispatch --vendor jules  --repo parvez/app "Fix the auth bug in /api/login"
 polyagent dispatch --vendor claude "Refactor the session store for clarity"
 
 # Unified status view (the core experience)
 polyagent status
 # VENDOR   SESSION    LABEL                STATUS         LAST UPDATE
-# cursor   abc123     Fix auth bug         needs_review   2 min ago
+# jules    abc123     Fix auth bug         needs_review   2 min ago
 # claude   xyz789     Refactor sessions    running        5 min ago
 
 polyagent status <session-id>            # Drill into one session
 
-# Follow up without leaving the terminal
-polyagent followup <session-id> "Approve this approach, continue"
-
 # Read what the agent has been doing
 polyagent output <session-id>
+
+# V3: follow up without leaving the terminal
+# polyagent followup <session-id> "Approve this approach, continue"
 ```
 
-**The primary loop:** `polyagent dispatch` → `polyagent status` → see `needs_review` → `polyagent followup`. No tab-switching, no vendor dashboards.
+**The primary loop (V1):** `polyagent dispatch` → `polyagent status` → see live status across both vendors. Follow-up closes the loop in V3.
 
 ---
 
 ## Tech Stack
 
-- **Language:** TypeScript (Node.js) — official vendor SDKs are JS-first.
-- **Vendor adapters:** wrap **official SDKs**, do not hand-roll HTTP.
-  - Cursor → `@cursor/sdk`
-  - Claude → `anthropic` (`beta.agents` / Managed Agents)
-  - Jules (V2) → REST (no official JS SDK yet) — thin `ky`/`fetch` wrapper
-  - Gemini/Antigravity (V2) → Interactions API REST
+- **Language:** TypeScript (Node 20+, ESM).
+- **Vendor adapters:** wrap the official SDK where one exists, else a thin `fetch` wrapper — both behind a per-vendor *port* so the adapter/tests don't know the difference.
+  - Claude (V1) → `@anthropic-ai/sdk` (`beta.agents` / Managed Agents) — *managed-agent SDK*
+  - Jules (V1) → raw `fetch` (`X-Goog-Api-Key`, no official JS SDK) — *raw-API integration*
+  - Gemini/Antigravity (V2) → `@google/genai` (Interactions API)
+  - Cursor (deferred) → `@cursor/sdk` (requires paid Pro)
+- **Keys:** `dotenv` → `.env.local` (`ANTHROPIC_API_KEY`, `JULES_API_KEY`).
 - **CLI framework:** `commander` (start simple) — `ink` later if an interactive TUI is wanted.
-- **HTTP client:** native `fetch` / `ky` — only where no official SDK exists (Jules, Gemini).
 - **State:** JSON file (MVP) → `better-sqlite3` → Supabase Postgres.
-- **Testing:** `vitest`.
-- **Deploy context:** demoing on Vercel; keep any future server pieces serverless-friendly (favor SSE/streaming over long-lived WebSockets until a dedicated push layer is justified).
+- **Testing:** `vitest` (pure logic + adapters via fake ports); live smoke scripts per vendor.
+- **Deploy context:** demoing on Vercel; a simple **Next.js UI** is the planned V2 front-end. Keep server pieces serverless-friendly (favor SSE/streaming over long-lived WebSockets until a dedicated push layer is justified).
 
 ---
 
@@ -258,17 +263,17 @@ A Claude-powered "chief of staff" above the adapter layer: given a project goal,
 
 ## Key Open Questions
 
-1. **Auth heterogeneity** *(the real architectural risk now)* — all V1/V2 vendors use a headless API key (Cursor, Claude, Jules, Gemini), which is clean. But auth shapes differ (Cursor: Basic/Bearer, team-provisioned keys; Claude: `x-api-key` + beta header; Jules: `X-Goog-Api-Key`; Gemini: API key). Storage: start with `~/.polyagent/config.json` (chmod 600), document the tradeoff, consider OS keychain (`keytar`) later. Codex's ChatGPT-session auth is the reason it's excluded.
+1. **Auth heterogeneity** — V1 vendors both use a headless API key, but shapes differ (Claude: `x-api-key` + beta header via SDK; Jules: `X-Goog-Api-Key` header). Storage: `.env.local` (gitignored) for now; consider OS keychain (`keytar`) later. Codex's ChatGPT-session auth is the reason it's excluded; Cursor's Pro requirement is why it's deferred.
 
-2. **Live handshake per vendor** — does the real `dispatch → first response → status` loop work end-to-end with real keys? **Validate via a thin spike on Cursor + Claude before the full build.** (Documentation confirms the surfaces exist; the spike confirms they behave.)
+2. **Live handshake per vendor** — does the real `dispatch → first response → status` loop work end-to-end with real keys? **Validate at the Task 4/5 live gates (Claude + Jules).** (Documentation confirms the surfaces exist; the gate confirms they behave.)
 
 3. **Dispatch metadata** — what useful metadata does each vendor return on dispatch / status (cost, branch, PR, sandbox URL, token usage)? Capture per-adapter in the implementation spec; surface the useful subset in `status`/`output`.
 
 4. **Beta/alpha stability** — Cursor (Beta), Claude Managed Agents (Beta), Jules (v1alpha), Gemini (Preview). Implement exponential backoff and tolerate schema drift from day one.
 
-5. **Polling interval** — default 30s, configurable. SSE streams are available (Cursor, Claude) for richer live output where worth it; polling is the floor.
+5. **Polling interval** — default 30s, configurable. SSE streams are available (Claude) for richer live output where worth it; polling is the floor.
 
-6. **Cursor team-key caveat** — Cloud Agents API keys appear to be admin/team-provisioned. Verify it works on a solo account during the spike.
+6. **Jules alpha drift** — `GET /sources` shape and `requirePlanApproval` default are v1alpha and may shift. Confirm at the live gate; keep error handling tolerant.
 
 ---
 
@@ -278,8 +283,9 @@ A Claude-powered "chief of staff" above the adapter layer: given a project goal,
 - **External-session tracking descoped** (was the central differentiator) — unconfirmed everywhere, impossible for Claude.
 - **Dispatch moved from V2 into V1.** Manual `register` / auto-discovery `sync` removed from the critical path; `listSessions()` demoted to optional best-effort.
 - **Claude Managed Agents** (new, Apr 2026) replaces the old "SDK-spawned only, can't track external" limitation for the dispatch model.
-- **V1 vendor pair = Cursor + Claude.** Jules + Gemini/Antigravity → V2. **Codex omitted** (no public API).
+- **V1 vendor pair = Claude + Jules** (managed-agent SDK + raw-API). **Gemini/Antigravity → V2**; **follow-up → V3** (across all 3 vendors). **Cursor deferred** (paid Pro required); **Codex omitted** (no public API).
 - **Gemini = Antigravity Interactions API** (Gemini CLI is being sunset, June 18 2026).
-- **Adapters wrap official SDKs** (`@cursor/sdk`, `anthropic`).
+- **Adapters wrap an official SDK where one exists (Claude), else a thin `fetch` wrapper (Jules)** — both behind a per-vendor port.
+- **Keys via `.env.local`** (`dotenv`); `polyagent auth` command dropped.
 - **`outputUrl` generalized** — no longer assumed to be a PR URL.
 - **State path:** JSON → SQLite → Supabase Postgres.
