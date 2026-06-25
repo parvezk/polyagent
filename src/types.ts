@@ -1,11 +1,6 @@
 export type Vendor = "claude" | "jules";
 
-export type SessionStatus =
-  | "running"
-  | "needs_review"
-  | "completed"
-  | "failed"
-  | "unknown";
+export type SessionStatus = "running" | "needs_review" | "completed" | "failed" | "unknown";
 
 export interface AgentSession {
   id: string; // vendor-native session ID
