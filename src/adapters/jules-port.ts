@@ -74,20 +74,41 @@ export function realJulesPort(apiKey: string): JulesPort {
   return {
     async createSession(i) {
       let sourceName: string | undefined;
+      let startingBranch: string | undefined = i.branch;
 
       if (i.repo) {
-        // Find the source record for this GitHub repo.
-        // Documented source name pattern: sources/github/<owner>/<repo>
-        // GET /v1alpha/sources returns { sources: [{ name, ... }] }
+        // Resolve the source for this GitHub repo. A session can only target a
+        // repo that is registered as a Jules source (the Jules GitHub App must
+        // be installed AND the repo selected in Jules). GET /v1alpha/sources
+        // returns { sources: [{ name, githubRepo: { owner, repo, defaultBranch:{displayName} } }] }.
         const sourcesResp = (await julesRequest(apiKey, "GET", "/sources")) as {
-          sources?: { name: string }[];
+          sources?: {
+            name: string;
+            githubRepo?: {
+              owner: string;
+              repo: string;
+              defaultBranch?: { displayName?: string };
+            };
+          }[];
         };
-        const repoPath = i.repo; // "owner/repo"
-        const found = sourcesResp.sources?.find((s) =>
-          s.name.toLowerCase().includes(repoPath.toLowerCase()),
+        const [owner, repo] = i.repo.split("/");
+        const sources = sourcesResp.sources ?? [];
+        const found = sources.find(
+          (s) =>
+            s.githubRepo?.owner.toLowerCase() === owner?.toLowerCase() &&
+            s.githubRepo?.repo.toLowerCase() === repo?.toLowerCase(),
         );
-        // Fallback: construct name from convention if lookup fails
-        sourceName = found?.name ?? `sources/github/${repoPath}`;
+        if (!found) {
+          const available = sources
+            .map((s) => (s.githubRepo ? `${s.githubRepo.owner}/${s.githubRepo.repo}` : s.name))
+            .join(", ");
+          throw new Error(
+            `Jules has no source for "${i.repo}". Install the Jules GitHub App and select the repo in Jules. Available: ${available || "(none)"}`,
+          );
+        }
+        sourceName = found.name;
+        // Fall back to the repo's real default branch (varies: main vs master).
+        startingBranch = startingBranch ?? found.githubRepo?.defaultBranch?.displayName;
       }
 
       const requestBody: Record<string, unknown> = {
@@ -100,9 +121,7 @@ export function realJulesPort(apiKey: string): JulesPort {
       if (sourceName) {
         requestBody.sourceContext = {
           source: sourceName,
-          githubRepoContext: {
-            startingBranch: i.branch ?? "main",
-          },
+          githubRepoContext: startingBranch ? { startingBranch } : {},
         };
       }
 
