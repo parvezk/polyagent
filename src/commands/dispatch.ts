@@ -30,7 +30,7 @@ async function resolveModel(opts: DispatchOptions): Promise<string | undefined> 
 
 export async function dispatchCommand(prompt: string, opts: DispatchOptions): Promise<void> {
   if (opts.vendor === "jules" && !opts.repo) {
-    console.error("Jules needs a repo: polyagent dispatch --vendor jules --repo owner/repo \"...\"");
+    console.error('Jules needs a repo: polyagent dispatch --vendor jules --repo owner/repo "..."');
     process.exitCode = 1;
     return;
   }
