@@ -7,7 +7,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/status-badge";
-import { VENDOR_STYLE, type SessionView } from "@/lib/view";
+import { VendorIcon, VENDOR_META } from "@/components/vendor-icon";
+import { type SessionView } from "@/lib/view";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -56,7 +57,6 @@ export function SessionDrawer({
     }
   }
 
-  const v = session ? (VENDOR_STYLE[session.vendor] ?? null) : null;
   const messages = data?.messages ?? [];
 
   return (
@@ -66,7 +66,10 @@ export function SessionDrawer({
           <>
             <SheetHeader className="space-y-2">
               <div className="flex items-center gap-3">
-                {v && <span className={`text-sm font-semibold ${v.text}`}>{v.label}</span>}
+                <span className="flex items-center gap-2 text-sm font-semibold text-zinc-200">
+                  <VendorIcon vendor={session.vendor} className="size-4" />
+                  {VENDOR_META[session.vendor]?.label ?? session.vendor}
+                </span>
                 <StatusBadge status={session.status} />
               </div>
               <SheetTitle className="text-left text-base font-normal text-zinc-200">
@@ -99,7 +102,7 @@ export function SessionDrawer({
               <Button
                 onClick={sendFollowup}
                 disabled={sending || !message.trim()}
-                className="w-full bg-cyan-500 text-zinc-950 hover:bg-cyan-400"
+                className="w-full bg-[#D97757] text-zinc-950 hover:bg-[#c8694a]"
               >
                 {sending ? "Sending…" : "Send follow-up"}
               </Button>
@@ -118,7 +121,7 @@ function Message({ role, content }: { role: string; content: string }) {
       className={`rounded-lg border px-3 py-2 text-sm ${
         isAgent
           ? "border-zinc-800 bg-zinc-900/50 text-zinc-200"
-          : "border-cyan-900/50 bg-cyan-950/20 text-cyan-100"
+          : "border-[#D97757]/40 bg-[#D97757]/10 text-orange-100"
       }`}
     >
       <div className="mb-1 text-[10px] uppercase tracking-wider text-zinc-500">

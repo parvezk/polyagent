@@ -2,7 +2,8 @@
 
 import useSWR from "swr";
 import { StatusBadge } from "@/components/status-badge";
-import { VENDOR_STYLE, relativeTime, type SessionView } from "@/lib/view";
+import { VendorIcon, VENDOR_META } from "@/components/vendor-icon";
+import { relativeTime, type SessionView } from "@/lib/view";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -39,27 +40,32 @@ export function SessionTable({ onSelect }: { onSelect: (s: SessionView) => void 
         </thead>
         <tbody>
           {sessions.map((s) => {
-            const v = VENDOR_STYLE[s.vendor] ?? { text: "text-zinc-300", ring: "", label: s.vendor };
+            const label = VENDOR_META[s.vendor]?.label ?? s.vendor;
             const needsYou = s.status === "needs_review";
             return (
               <tr
                 key={s.id}
                 onClick={() => onSelect(s)}
                 className={`cursor-pointer border-b border-zinc-900 transition-colors hover:bg-zinc-900/60 ${
-                  needsYou ? "bg-amber-500/5" : ""
+                  needsYou
+                    ? "bg-amber-400/[0.07] shadow-[inset_3px_0_0_0_rgb(251,191,36)]"
+                    : ""
                 }`}
               >
-                <td className="px-4 py-3">
-                  <span className={`font-semibold ${v.text}`}>{v.label}</span>
+                <td className="px-4 py-2.5">
+                  <span className="flex items-center gap-2 font-medium text-zinc-200">
+                    <VendorIcon vendor={s.vendor} className="size-4 shrink-0" />
+                    {label}
+                  </span>
                 </td>
-                <td className="max-w-md px-4 py-3">
+                <td className="max-w-md px-4 py-2.5">
                   <div className="truncate text-zinc-200">{s.label}</div>
                   <div className="truncate font-mono text-[11px] text-zinc-600">{s.id}</div>
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-4 py-2.5">
                   <StatusBadge status={s.status} />
                 </td>
-                <td className="whitespace-nowrap px-4 py-3 text-xs text-zinc-500">
+                <td className="whitespace-nowrap px-4 py-2.5 font-mono text-xs text-zinc-500">
                   {relativeTime(s.lastUpdate)}
                 </td>
               </tr>

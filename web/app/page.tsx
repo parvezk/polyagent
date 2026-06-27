@@ -4,19 +4,18 @@ import { useState } from "react";
 import { SessionTable } from "@/components/session-table";
 import { NewAgentModal } from "@/components/new-agent-modal";
 import { SessionDrawer } from "@/components/session-drawer";
+import { TelemetryStrip } from "@/components/telemetry-strip";
 import type { SessionView } from "@/lib/view";
 
 export default function DashboardPage() {
   const [selected, setSelected] = useState<SessionView | null>(null);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div className="flex items-end justify-between">
-        <div>
+        <div className="space-y-2">
           <h1 className="text-lg font-semibold">Agents</h1>
-          <p className="text-sm text-zinc-500">
-            Every cloud agent across vendors, one view. Click a row to inspect or steer it.
-          </p>
+          <TelemetryStrip />
         </div>
         <NewAgentModal />
       </div>

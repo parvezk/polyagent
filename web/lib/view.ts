@@ -19,18 +19,14 @@ export interface SessionView {
   firstMessage?: string;
 }
 
-// Status → Tailwind classes. Brand-consistent with the CLI status colors.
+// Status → Tailwind classes. needs_review is intentionally the loudest (gold + glow);
+// it's the actionable state. running pulses; the rest are calm.
 export const STATUS_STYLE: Record<SessionStatus, { dot: string; text: string; label: string }> = {
-  running: { dot: "bg-cyan-400 animate-pulse", text: "text-cyan-300", label: "running" },
+  running: { dot: "bg-blue-400 animate-pulse", text: "text-blue-300", label: "running" },
   needs_review: { dot: "bg-amber-400", text: "text-amber-300", label: "needs review" },
   completed: { dot: "bg-emerald-400", text: "text-emerald-300", label: "completed" },
   failed: { dot: "bg-red-400", text: "text-red-300", label: "failed" },
   unknown: { dot: "bg-zinc-500", text: "text-zinc-400", label: "unknown" },
-};
-
-export const VENDOR_STYLE: Record<string, { text: string; ring: string; label: string }> = {
-  claude: { text: "text-fuchsia-300", ring: "ring-fuchsia-500/30", label: "Claude" },
-  jules: { text: "text-blue-300", ring: "ring-blue-500/30", label: "Jules" },
 };
 
 export function relativeTime(iso: string): string {

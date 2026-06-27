@@ -21,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { VendorIcon } from "@/components/vendor-icon";
 
 type Vendor = "claude" | "jules";
 const CLAUDE_MODELS = ["claude-opus-4-8", "claude-sonnet-4-6"];
@@ -69,7 +70,7 @@ export function NewAgentModal() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button className="bg-cyan-500 text-zinc-950 hover:bg-cyan-400" />}>
+      <DialogTrigger render={<Button className="bg-[#D97757] text-zinc-950 hover:bg-[#c8694a]" />}>
         + New Agent
       </DialogTrigger>
       <DialogContent className="border-zinc-800 bg-zinc-950 text-zinc-100 sm:max-w-lg">
@@ -83,13 +84,25 @@ export function NewAgentModal() {
         <div className="space-y-4 py-2">
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-zinc-400">Vendor</label>
-            <Select value={vendor} onValueChange={(v) => setVendor(v as Vendor)}>
+            <Select value={vendor} onValueChange={(v) => v && setVendor(v as Vendor)}>
               <SelectTrigger className="border-zinc-800 bg-zinc-900">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="border-zinc-800 bg-zinc-900 text-zinc-100">
-                <SelectItem value="claude">Claude — managed agent · general sandbox</SelectItem>
-                <SelectItem value="jules">Jules — async · repo → PR</SelectItem>
+                <SelectItem value="claude">
+                  <span className="flex items-center gap-2 pr-4">
+                    <VendorIcon vendor="claude" />
+                    <span className="font-medium">Claude</span>
+                    <span className="text-xs text-zinc-500">general sandbox</span>
+                  </span>
+                </SelectItem>
+                <SelectItem value="jules">
+                  <span className="flex items-center gap-2 pr-4">
+                    <VendorIcon vendor="jules" />
+                    <span className="font-medium">Jules</span>
+                    <span className="text-xs text-zinc-500">repo → PR</span>
+                  </span>
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -97,7 +110,7 @@ export function NewAgentModal() {
           {vendor === "jules" && (
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-zinc-400">Repo</label>
-              <Select value={repo} onValueChange={setRepo}>
+              <Select value={repo} onValueChange={(v) => v && setRepo(v)}>
                 <SelectTrigger className="border-zinc-800 bg-zinc-900">
                   <SelectValue placeholder="Select a connected repo" />
                 </SelectTrigger>
@@ -115,7 +128,7 @@ export function NewAgentModal() {
           {vendor === "claude" && (
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-zinc-400">Model</label>
-              <Select value={model} onValueChange={setModel}>
+              <Select value={model} onValueChange={(v) => v && setModel(v)}>
                 <SelectTrigger className="border-zinc-800 bg-zinc-900">
                   <SelectValue />
                 </SelectTrigger>
@@ -145,7 +158,7 @@ export function NewAgentModal() {
           <Button
             onClick={dispatch}
             disabled={submitting || !prompt.trim() || (vendor === "jules" && !repo)}
-            className="bg-cyan-500 text-zinc-950 hover:bg-cyan-400"
+            className="bg-[#D97757] text-zinc-950 hover:bg-[#c8694a]"
           >
             {submitting ? "Dispatching…" : "Dispatch"}
           </Button>
