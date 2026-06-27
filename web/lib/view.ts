@@ -9,7 +9,7 @@ export type SessionStatus =
 
 export interface SessionView {
   id: string;
-  vendor: "claude" | "jules";
+  vendor: "claude" | "jules" | "cursor" | "gemini";
   label: string;
   status: SessionStatus;
   dispatchedAt: string;

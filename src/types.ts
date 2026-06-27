@@ -1,4 +1,4 @@
-export type Vendor = "claude" | "jules";
+export type Vendor = "claude" | "jules" | "cursor" | "gemini";
 
 export type SessionStatus = "running" | "needs_review" | "completed" | "failed" | "unknown";
 

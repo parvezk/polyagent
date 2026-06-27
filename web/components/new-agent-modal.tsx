@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -23,8 +24,9 @@ import {
 } from "@/components/ui/select";
 import { VendorIcon } from "@/components/vendor-icon";
 
-type Vendor = "claude" | "jules";
+type Vendor = "claude" | "jules" | "cursor" | "gemini";
 const CLAUDE_MODELS = ["claude-opus-4-8", "claude-sonnet-4-6"];
+const needsRepo = (v: Vendor) => v === "jules" || v === "cursor";
 
 export function NewAgentModal() {
   const [open, setOpen] = useState(false);
@@ -53,7 +55,7 @@ export function NewAgentModal() {
       const res = await fetch("/api/dispatch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ vendor, prompt, repo: vendor === "jules" ? repo : undefined, model: vendor === "claude" ? model : undefined }),
+        body: JSON.stringify({ vendor, prompt, repo: needsRepo(vendor) ? repo : undefined, model: vendor === "claude" ? model : undefined }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Dispatch failed");
@@ -103,25 +105,48 @@ export function NewAgentModal() {
                     <span className="text-xs text-zinc-500">repo → PR</span>
                   </span>
                 </SelectItem>
+                <SelectItem value="cursor">
+                  <span className="flex items-center gap-2 pr-4">
+                    <VendorIcon vendor="cursor" />
+                    <span className="font-medium">Cursor</span>
+                    <span className="text-xs text-zinc-500">repo → PR</span>
+                  </span>
+                </SelectItem>
+                <SelectItem value="gemini">
+                  <span className="flex items-center gap-2 pr-4">
+                    <VendorIcon vendor="gemini" />
+                    <span className="font-medium">Gemini</span>
+                    <span className="text-xs text-zinc-500">Antigravity sandbox</span>
+                  </span>
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          {vendor === "jules" && (
+          {needsRepo(vendor) && (
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-zinc-400">Repo</label>
-              <Select value={repo} onValueChange={(v) => v && setRepo(v)}>
-                <SelectTrigger className="border-zinc-800 bg-zinc-900">
-                  <SelectValue placeholder="Select a connected repo" />
-                </SelectTrigger>
-                <SelectContent className="border-zinc-800 bg-zinc-900 text-zinc-100">
-                  {repos.map((r) => (
-                    <SelectItem key={r.repo} value={r.repo}>
-                      {r.repo} {r.defaultBranch ? `(${r.defaultBranch})` : ""}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {vendor === "jules" ? (
+                <Select value={repo} onValueChange={(v) => v && setRepo(v)}>
+                  <SelectTrigger className="border-zinc-800 bg-zinc-900">
+                    <SelectValue placeholder="Select a connected repo" />
+                  </SelectTrigger>
+                  <SelectContent className="border-zinc-800 bg-zinc-900 text-zinc-100">
+                    {repos.map((r) => (
+                      <SelectItem key={r.repo} value={r.repo}>
+                        {r.repo} {r.defaultBranch ? `(${r.defaultBranch})` : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input
+                  value={repo}
+                  onChange={(e) => setRepo(e.target.value)}
+                  placeholder="owner/repo"
+                  className="border-zinc-800 bg-zinc-900"
+                />
+              )}
             </div>
           )}
 
@@ -157,7 +182,7 @@ export function NewAgentModal() {
         <DialogFooter>
           <Button
             onClick={dispatch}
-            disabled={submitting || !prompt.trim() || (vendor === "jules" && !repo)}
+            disabled={submitting || !prompt.trim() || (needsRepo(vendor) && !repo)}
             className="bg-[#D97757] text-zinc-950 hover:bg-[#c8694a]"
           >
             {submitting ? "Dispatching…" : "Dispatch"}

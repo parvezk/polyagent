@@ -4,7 +4,7 @@
 create table if not exists public.sessions (
   id            text primary key,                -- vendor-native session id
   user_id       uuid not null references auth.users (id) on delete cascade,
-  vendor        text not null check (vendor in ('claude', 'jules')),
+  vendor        text not null check (vendor in ('claude', 'jules', 'cursor', 'gemini')),
   label         text,
   status        text not null default 'running',
   output_url    text,

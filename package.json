@@ -28,6 +28,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.105.0",
     "@clack/prompts": "^1.6.0",
+    "@cursor/sdk": "^1.0.22",
     "commander": "^15.0.0",
     "dotenv": "^17.4.2",
     "picocolors": "^1.1.1"

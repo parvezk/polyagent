@@ -7,7 +7,7 @@ import type { AgentSession } from "@/lib/core";
 export interface DbSession {
   id: string;
   user_id: string;
-  vendor: "claude" | "jules";
+  vendor: "claude" | "jules" | "cursor" | "gemini";
   label: string | null;
   status: string;
   output_url: string | null;

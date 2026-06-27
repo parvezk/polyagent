@@ -13,6 +13,8 @@ export const STATE_PATH = join(homedir(), ".polyagent", "state.json");
 const ENV_VARS: Record<Vendor, string> = {
   claude: "ANTHROPIC_API_KEY",
   jules: "JULES_API_KEY",
+  cursor: "CURSOR_API_KEY",
+  gemini: "GEMINI_API_KEY",
 };
 
 /** Resolve a vendor's API key from the environment, or throw a helpful error. */
