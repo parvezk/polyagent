@@ -7,6 +7,7 @@ import { SessionTable } from "@/components/session-table";
 import { NewAgentModal } from "@/components/new-agent-modal";
 import { SessionDrawer } from "@/components/session-drawer";
 import { TelemetryStrip } from "@/components/telemetry-strip";
+import { VendorHero } from "@/components/vendor-hero";
 import { Button } from "@/components/ui/button";
 import type { SessionView } from "@/lib/view";
 
@@ -31,9 +32,10 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-5">
+      <VendorHero />
       <div className="flex items-end justify-between">
-        <div className="space-y-2">
-          <h1 className="text-lg font-semibold">Agents</h1>
+        <div className="space-y-2.5">
+          <h1 className="text-xl font-semibold">Coding Agents</h1>
           <TelemetryStrip />
         </div>
         <div className="flex items-center gap-2">

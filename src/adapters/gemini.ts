@@ -1,7 +1,7 @@
 import type { AgentAdapter } from "./adapter.js";
 import type { AgentSession, AgentStatus, AgentOutput, DispatchRequest } from "../types.js";
 import type { GeminiPort, GeminiInteractionStatus } from "./gemini-port.js";
-import { labelFromPrompt } from "../utils/text.js";
+import { labelFromPrompt, withRepoInstruction } from "../utils/text.js";
 
 // ---------------------------------------------------------------------------
 // Status mapping: Gemini Interactions API → normalized SessionStatus
@@ -36,7 +36,7 @@ export class GeminiAdapter implements AgentAdapter {
 
   async dispatch(req: DispatchRequest): Promise<AgentSession> {
     const created = await this.port.createInteraction({
-      prompt: req.prompt,
+      prompt: withRepoInstruction(req),
       modelId: req.model,
     });
 
@@ -46,6 +46,7 @@ export class GeminiAdapter implements AgentAdapter {
       label: labelFromPrompt(req.prompt),
       status: mapStatus(created.status),
       dispatchedAt: new Date().toISOString(),
+      outputUrl: req.repo ? `https://github.com/${req.repo}` : undefined,
       firstMessage: created.firstReply,
     };
   }

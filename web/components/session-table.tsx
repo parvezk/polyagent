@@ -32,6 +32,7 @@ export function SessionTable({ onSelect }: { onSelect: (s: SessionView) => void 
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-zinc-800 text-left text-xs uppercase tracking-wider text-zinc-500">
+            <th className="px-4 py-3 font-medium">#</th>
             <th className="px-4 py-3 font-medium">Vendor</th>
             <th className="px-4 py-3 font-medium">Task</th>
             <th className="px-4 py-3 font-medium">Status</th>
@@ -39,7 +40,7 @@ export function SessionTable({ onSelect }: { onSelect: (s: SessionView) => void 
           </tr>
         </thead>
         <tbody>
-          {sessions.map((s) => {
+          {sessions.map((s, i) => {
             const label = VENDOR_META[s.vendor]?.label ?? s.vendor;
             const needsYou = s.status === "needs_review";
             return (
@@ -52,6 +53,7 @@ export function SessionTable({ onSelect }: { onSelect: (s: SessionView) => void 
                     : ""
                 }`}
               >
+                <td className="px-4 py-2.5 font-mono text-xs text-zinc-600">{i + 1}</td>
                 <td className="px-4 py-2.5">
                   <span className="flex items-center gap-2 font-medium text-zinc-200">
                     <VendorIcon vendor={s.vendor} className="size-4 shrink-0" />

@@ -1,4 +1,4 @@
-import { labelFromPrompt } from "../utils/text.js";
+import { labelFromPrompt, withRepoInstruction } from "../utils/text.js";
 // ---------------------------------------------------------------------------
 // Status mapping: Gemini Interactions API → normalized SessionStatus
 // ---------------------------------------------------------------------------
@@ -30,7 +30,7 @@ export class GeminiAdapter {
     }
     async dispatch(req) {
         const created = await this.port.createInteraction({
-            prompt: req.prompt,
+            prompt: withRepoInstruction(req),
             modelId: req.model,
         });
         return {
@@ -39,6 +39,7 @@ export class GeminiAdapter {
             label: labelFromPrompt(req.prompt),
             status: mapStatus(created.status),
             dispatchedAt: new Date().toISOString(),
+            outputUrl: req.repo ? `https://github.com/${req.repo}` : undefined,
             firstMessage: created.firstReply,
         };
     }

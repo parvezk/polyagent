@@ -25,8 +25,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           <div className="mx-auto flex max-w-[1100px] items-center gap-3 px-6 py-3">
             <span className="text-[#D97757]">◆</span>
             <span className="font-semibold tracking-tight">PolyAgent</span>
-            <span className="hidden text-sm text-zinc-500 sm:inline">
-              · vendor-agnostic agent control plane
+            <span className="hidden text-sm text-zinc-500 md:inline">
+              · Assemble the best team for every job — under one roof
             </span>
             <div className="ml-auto">
               <UserMenu />

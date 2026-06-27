@@ -22,17 +22,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { VendorIcon } from "@/components/vendor-icon";
+import { VendorIcon, VENDOR_META, type VendorKey } from "@/components/vendor-icon";
 
-type Vendor = "claude" | "jules" | "cursor" | "gemini";
 const CLAUDE_MODELS = ["claude-opus-4-8", "claude-sonnet-4-6"];
-const needsRepo = (v: Vendor) => v === "jules" || v === "cursor";
+const VENDORS: VendorKey[] = ["claude", "jules", "cursor", "gemini"];
+const repoRequired = (v: VendorKey) => v === "jules" || v === "cursor";
 
 export function NewAgentModal() {
   const [open, setOpen] = useState(false);
-  const [vendor, setVendor] = useState<Vendor>("claude");
+  const [vendor, setVendor] = useState<VendorKey>("claude");
   const [model, setModel] = useState(CLAUDE_MODELS[0]);
   const [repo, setRepo] = useState("");
+  const [branch, setBranch] = useState("");
   const [repos, setRepos] = useState<{ repo: string; defaultBranch?: string }[]>([]);
   const [prompt, setPrompt] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -49,22 +50,28 @@ export function NewAgentModal() {
     }
   }, [open, vendor, repos.length]);
 
-  async function dispatch() {
+  async function launch() {
     setSubmitting(true);
     try {
       const res = await fetch("/api/dispatch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ vendor, prompt, repo: needsRepo(vendor) ? repo : undefined, model: vendor === "claude" ? model : undefined }),
+        body: JSON.stringify({
+          vendor,
+          prompt,
+          repo: repo || undefined,
+          branch: branch || undefined,
+          model: vendor === "claude" ? model : undefined,
+        }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Dispatch failed");
-      toast.success(`Dispatched ${vendor} · ${data.session.id}`);
+      if (!res.ok) throw new Error(data.error ?? "Launch failed");
+      toast.success(`Launched ${VENDOR_META[vendor].label} · ${data.session.id}`);
       mutate("/api/sessions");
       setOpen(false);
       setPrompt("");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Dispatch failed");
+      toast.error(err instanceof Error ? err.message : "Launch failed");
     } finally {
       setSubmitting(false);
     }
@@ -75,89 +82,90 @@ export function NewAgentModal() {
       <DialogTrigger render={<Button className="bg-[#D97757] text-zinc-950 hover:bg-[#c8694a]" />}>
         + New Agent
       </DialogTrigger>
-      <DialogContent className="border-zinc-800 bg-zinc-950 text-zinc-100 sm:max-w-lg">
+      {/* Lighter panel than the table — visual separation */}
+      <DialogContent className="border-zinc-700/60 bg-zinc-900 text-zinc-100 sm:max-w-[40rem]">
         <DialogHeader>
-          <DialogTitle>Dispatch an agent</DialogTitle>
-          <DialogDescription className="text-zinc-500">
-            Start a cloud agent on any connected vendor.
+          <DialogTitle>New agent</DialogTitle>
+          <DialogDescription className="text-zinc-400">
+            Launch a cloud agent on any connected vendor.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
+          {/* Vendor — icon radio tiles */}
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-zinc-400">Vendor</label>
-            <Select value={vendor} onValueChange={(v) => v && setVendor(v as Vendor)}>
-              <SelectTrigger className="border-zinc-800 bg-zinc-900">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="border-zinc-800 bg-zinc-900 text-zinc-100">
-                <SelectItem value="claude">
-                  <span className="flex items-center gap-2 pr-4">
-                    <VendorIcon vendor="claude" />
-                    <span className="font-medium">Claude</span>
-                    <span className="text-xs text-zinc-500">general sandbox</span>
-                  </span>
-                </SelectItem>
-                <SelectItem value="jules">
-                  <span className="flex items-center gap-2 pr-4">
-                    <VendorIcon vendor="jules" />
-                    <span className="font-medium">Jules</span>
-                    <span className="text-xs text-zinc-500">repo → PR</span>
-                  </span>
-                </SelectItem>
-                <SelectItem value="cursor">
-                  <span className="flex items-center gap-2 pr-4">
-                    <VendorIcon vendor="cursor" />
-                    <span className="font-medium">Cursor</span>
-                    <span className="text-xs text-zinc-500">repo → PR</span>
-                  </span>
-                </SelectItem>
-                <SelectItem value="gemini">
-                  <span className="flex items-center gap-2 pr-4">
-                    <VendorIcon vendor="gemini" />
-                    <span className="font-medium">Gemini</span>
-                    <span className="text-xs text-zinc-500">Antigravity sandbox</span>
-                  </span>
-                </SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="grid grid-cols-4 gap-2">
+              {VENDORS.map((v) => {
+                const selected = v === vendor;
+                return (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => setVendor(v)}
+                    className={`flex flex-col items-center gap-1.5 rounded-lg border px-2 py-3 transition-all ${
+                      selected
+                        ? "border-[#D97757] bg-[#D97757]/10 ring-1 ring-[#D97757]/40"
+                        : "border-zinc-700/60 bg-zinc-950/40 hover:border-zinc-600"
+                    }`}
+                  >
+                    <VendorIcon vendor={v} className="size-6" />
+                    <span
+                      className={`text-xs font-medium ${selected ? "text-zinc-100" : "text-zinc-400"}`}
+                    >
+                      {VENDOR_META[v].label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-xs text-zinc-500">{VENDOR_META[vendor].hint}</p>
           </div>
 
-          {needsRepo(vendor) && (
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-zinc-400">Repo</label>
-              {vendor === "jules" ? (
-                <Select value={repo} onValueChange={(v) => v && setRepo(v)}>
-                  <SelectTrigger className="border-zinc-800 bg-zinc-900">
-                    <SelectValue placeholder="Select a connected repo" />
-                  </SelectTrigger>
-                  <SelectContent className="border-zinc-800 bg-zinc-900 text-zinc-100">
-                    {repos.map((r) => (
-                      <SelectItem key={r.repo} value={r.repo}>
-                        {r.repo} {r.defaultBranch ? `(${r.defaultBranch})` : ""}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
+          {/* Repo (+ branch) */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium text-zinc-400">
+              Repo {repoRequired(vendor) ? "" : <span className="text-zinc-600">(optional)</span>}
+            </label>
+            {vendor === "jules" ? (
+              <Select value={repo} onValueChange={(v) => v && setRepo(v)}>
+                <SelectTrigger className="border-zinc-700 bg-zinc-950/50">
+                  <SelectValue placeholder="Select a connected repo" />
+                </SelectTrigger>
+                <SelectContent className="border-zinc-700 bg-zinc-900 text-zinc-100">
+                  {repos.map((r) => (
+                    <SelectItem key={r.repo} value={r.repo}>
+                      {r.repo} {r.defaultBranch ? `(${r.defaultBranch})` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <div className="grid grid-cols-3 gap-2">
                 <Input
                   value={repo}
                   onChange={(e) => setRepo(e.target.value)}
                   placeholder="owner/repo"
-                  className="border-zinc-800 bg-zinc-900"
+                  className="col-span-2 border-zinc-700 bg-zinc-950/50"
                 />
-              )}
-            </div>
-          )}
+                <Input
+                  value={branch}
+                  onChange={(e) => setBranch(e.target.value)}
+                  placeholder="branch (optional)"
+                  className="border-zinc-700 bg-zinc-950/50"
+                />
+              </div>
+            )}
+          </div>
 
           {vendor === "claude" && (
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-zinc-400">Model</label>
               <Select value={model} onValueChange={(v) => v && setModel(v)}>
-                <SelectTrigger className="border-zinc-800 bg-zinc-900">
+                <SelectTrigger className="border-zinc-700 bg-zinc-950/50">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="border-zinc-800 bg-zinc-900 text-zinc-100">
+                <SelectContent className="border-zinc-700 bg-zinc-900 text-zinc-100">
                   {CLAUDE_MODELS.map((m) => (
                     <SelectItem key={m} value={m}>
                       {m}
@@ -174,18 +182,18 @@ export function NewAgentModal() {
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               placeholder="e.g. Identify any security/XSS flaws in the repo"
-              className="min-h-24 border-zinc-800 bg-zinc-900"
+              className="min-h-24 border-zinc-700 bg-zinc-950/50"
             />
           </div>
         </div>
 
         <DialogFooter>
           <Button
-            onClick={dispatch}
-            disabled={submitting || !prompt.trim() || (needsRepo(vendor) && !repo)}
+            onClick={launch}
+            disabled={submitting || !prompt.trim() || (repoRequired(vendor) && !repo)}
             className="bg-[#D97757] text-zinc-950 hover:bg-[#c8694a]"
           >
-            {submitting ? "Dispatching…" : "Dispatch"}
+            {submitting ? "Launching…" : "Launch agent"}
           </Button>
         </DialogFooter>
       </DialogContent>

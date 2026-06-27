@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import useSWR, { mutate } from "swr";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -28,6 +28,14 @@ export function SessionDrawer({
 }) {
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
+  // Optimistically-shown follow-ups (server output may not echo them back).
+  const [sent, setSent] = useState<string[]>([]);
+
+  // Reset optimistic messages when switching sessions.
+  useEffect(() => {
+    setSent([]);
+    setMessage("");
+  }, [session?.id]);
 
   const { data } = useSWR<DetailResponse>(
     session ? `/api/sessions/${session.id}` : null,
@@ -47,6 +55,7 @@ export function SessionDrawer({
       const d = await res.json();
       if (!res.ok) throw new Error(d.error ?? "Follow-up failed");
       toast.success("Follow-up sent");
+      setSent((prev) => [...prev, message]); // optimistic — show it immediately
       setMessage("");
       mutate(`/api/sessions/${session.id}`);
       mutate("/api/sessions");
@@ -61,7 +70,7 @@ export function SessionDrawer({
 
   return (
     <Sheet open={!!session} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent className="flex w-full flex-col border-zinc-800 bg-zinc-950 text-zinc-100 sm:max-w-xl">
+      <SheetContent className="flex w-full flex-col border-l-2 border-l-[#D97757]/40 bg-zinc-950 text-zinc-100 sm:max-w-xl">
         {session && (
           <>
             <SheetHeader className="space-y-2">
@@ -85,7 +94,10 @@ export function SessionDrawer({
               {messages.map((m, i) => (
                 <Message key={i} role={m.role} content={m.content} />
               ))}
-              {!data?.firstMessage && messages.length === 0 && (
+              {sent.map((m, i) => (
+                <Message key={`sent-${i}`} role="human" content={m} />
+              ))}
+              {!data?.firstMessage && messages.length === 0 && sent.length === 0 && (
                 <p className="py-8 text-center text-xs text-zinc-600">
                   No output yet — the agent is working.
                 </p>

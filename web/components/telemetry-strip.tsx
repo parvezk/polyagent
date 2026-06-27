@@ -14,17 +14,23 @@ export function TelemetryStrip() {
   const count = (s: string) => sessions.filter((x) => x.status === s).length;
 
   return (
-    <div className="flex items-center gap-4 font-mono text-xs text-zinc-500">
-      <span className="flex items-center gap-1.5">
+    <div className="flex items-center gap-3 font-mono text-sm">
+      <span className="flex items-center gap-1.5 text-zinc-500">
         <span
           className={`size-2 rounded-full bg-[#D97757] ${isValidating ? "animate-ping" : "animate-pulse"}`}
         />
         live
       </span>
       <span className="text-zinc-700">·</span>
-      <span className="text-blue-300">{count("running")} running</span>
-      <span className="text-amber-300">{count("needs_review")} needs review</span>
-      <span className="text-emerald-300">{count("completed")} completed</span>
+      <span className="text-blue-300">
+        <span className="font-semibold">{count("running")}</span> running
+      </span>
+      <span className="text-amber-300">
+        <span className="font-semibold">{count("needs_review")}</span> needs review
+      </span>
+      <span className="text-emerald-300">
+        <span className="font-semibold">{count("completed")}</span> completed
+      </span>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import type { AgentAdapter } from "./adapter.js";
 import type { AgentSession, AgentStatus, AgentOutput, DispatchRequest } from "../types.js";
 import type { ClaudePort, ClaudeSessionStatus } from "./claude-port.js";
-import { labelFromPrompt } from "../utils/text.js";
+import { labelFromPrompt, withRepoInstruction } from "../utils/text.js";
 
 // ---------------------------------------------------------------------------
 // Status mapping: Claude → normalized SessionStatus
@@ -31,8 +31,10 @@ export class ClaudeAdapter implements AgentAdapter {
   constructor(private readonly port: ClaudePort) {}
 
   async dispatch(req: DispatchRequest): Promise<AgentSession> {
+    // Claude is a general sandbox — give it a repo by instructing it to clone.
+    const prompt = withRepoInstruction(req);
     const created = await this.port.createSession({
-      prompt: req.prompt,
+      prompt,
       modelId: req.model,
     });
 
@@ -42,6 +44,7 @@ export class ClaudeAdapter implements AgentAdapter {
       label: labelFromPrompt(req.prompt),
       status: mapStatus(created.status),
       dispatchedAt: new Date().toISOString(),
+      outputUrl: req.repo ? `https://github.com/${req.repo}` : undefined,
       firstMessage: created.firstReply || undefined,
     };
   }
