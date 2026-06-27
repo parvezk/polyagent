@@ -1,14 +1,15 @@
 // Bridge to the PolyAgent core (the same adapters/registry the CLI uses).
-// Imports the compiled core from ../../dist so the web app reuses the exact
-// vendor logic. Rebuild core with `npm run build` at the repo root after core edits.
+// Imports the VENDORED compiled core from web/_core so the web app is
+// self-contained (deployable to Vercel, which can't reach ../../dist).
 //
-// SERVER-ONLY: this pulls in vendor SDKs + reads API keys. Never import from a
-// client component.
-export { buildAdapter } from "../../dist/registry.js";
-export { StateStore } from "../../dist/state.js";
-export { STATE_PATH, resolveKey } from "../../dist/config.js";
-export { realJulesPort } from "../../dist/adapters/jules-port.js";
-export { DEFAULT_CLAUDE_MODEL } from "../../dist/constants/claude.js";
+// After editing the core (repo src/), run `npm run sync-core` from web/ to refresh.
+//
+// SERVER-ONLY: pulls in vendor SDKs + reads API keys. Never import in a client component.
+export { buildAdapter } from "../_core/registry.js";
+export { StateStore } from "../_core/state.js";
+export { STATE_PATH, resolveKey } from "../_core/config.js";
+export { realJulesPort } from "../_core/adapters/jules-port.js";
+export { DEFAULT_CLAUDE_MODEL } from "../_core/constants/claude.js";
 export type {
   Vendor,
   SessionStatus,
@@ -16,4 +17,4 @@ export type {
   AgentStatus,
   AgentOutput,
   DispatchRequest,
-} from "../../dist/types.js";
+} from "../_core/types.js";
