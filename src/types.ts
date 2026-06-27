@@ -10,6 +10,7 @@ export interface AgentSession {
   dispatchedAt: string; // ISO
   lastPolled?: string; // ISO
   outputUrl?: string; // PR/branch (Jules) OR session URL (Claude) — generic, NOT assumed to be a PR
+  firstMessage?: string; // first agent response captured at dispatch (Claude); undefined for async vendors (Jules)
 }
 
 export interface AgentStatus {

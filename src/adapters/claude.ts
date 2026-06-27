@@ -42,6 +42,7 @@ export class ClaudeAdapter implements AgentAdapter {
       label: labelFromPrompt(req.prompt),
       status: mapStatus(created.status),
       dispatchedAt: new Date().toISOString(),
+      firstMessage: created.firstReply || undefined,
     };
   }
 
