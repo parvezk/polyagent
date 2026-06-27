@@ -62,7 +62,9 @@ export function SessionTable({ onSelect }: { onSelect: (s: SessionView) => void 
                 </td>
                 <td className="max-w-md px-4 py-2.5">
                   <div className="truncate text-zinc-200">{s.label}</div>
-                  <div className="truncate font-mono text-[11px] text-zinc-600">{s.id}</div>
+                  <div className="truncate font-mono text-[11px] text-zinc-600">
+                    {s.id.length > 32 ? s.id.slice(0, 32) + "…" : s.id}
+                  </div>
                 </td>
                 <td className="px-4 py-2.5">
                   <StatusBadge status={s.status} />
