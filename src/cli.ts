@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { Command } from "commander";
 import { dispatchCommand } from "./commands/dispatch.js";
+import { statusCommand } from "./commands/status.js";
 import type { Vendor } from "./types.js";
 
 const program = new Command();
@@ -22,5 +23,11 @@ program
       model: o.model,
     }),
   );
+
+program
+  .command("status")
+  .argument("[sessionId]", "show one session instead of all")
+  .description("Unified live status of all dispatched sessions")
+  .action((sessionId?: string) => statusCommand(sessionId));
 
 program.parseAsync();
