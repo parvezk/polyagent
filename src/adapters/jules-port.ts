@@ -25,6 +25,9 @@ export interface JulesPort {
   }>;
 
   sendMessage(sessionId: string, message: string): Promise<void>;
+
+  /** List GitHub repos registered as Jules sources. Optional (used by the CLI wizard). */
+  listSources?(): Promise<{ repo: string; defaultBranch?: string }[]>;
 }
 
 // ---------------------------------------------------------------------------
@@ -188,6 +191,20 @@ export function realJulesPort(apiKey: string): JulesPort {
       await julesRequest(apiKey, "POST", `/sessions/${sessionId}:sendMessage`, {
         prompt: message,
       });
+    },
+
+    async listSources() {
+      const resp = (await julesRequest(apiKey, "GET", "/sources")) as {
+        sources?: {
+          githubRepo?: { owner: string; repo: string; defaultBranch?: { displayName?: string } };
+        }[];
+      };
+      return (resp.sources ?? [])
+        .filter((s) => s.githubRepo)
+        .map((s) => ({
+          repo: `${s.githubRepo!.owner}/${s.githubRepo!.repo}`,
+          defaultBranch: s.githubRepo!.defaultBranch?.displayName,
+        }));
     },
   };
 }
