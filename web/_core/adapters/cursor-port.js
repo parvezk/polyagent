@@ -37,16 +37,14 @@ export function realCursorPort(apiKey) {
             };
         },
         async getLatestRunStatus(agentId) {
+            // Use Agent.get (durable metadata: status + summary) rather than the
+            // streaming getRun — the latter emits an async TransformError that can
+            // escape the caller's try/catch.
             const { Agent } = (await import("@cursor/sdk"));
-            const runs = await Agent.listRuns(agentId, { runtime: "cloud", apiKey, limit: 1 });
-            const latest = runs.items?.[0];
-            if (!latest) {
-                return { status: "running" };
-            }
-            const run = await Agent.getRun(latest.id, { runtime: "cloud", agentId, apiKey });
+            const info = await Agent.get(agentId, { apiKey });
             return {
-                status: run.status,
-                summary: run.result ?? undefined,
+                status: info.status ?? "running",
+                summary: info.summary,
             };
         },
         async sendFollowup(agentId, message) {
