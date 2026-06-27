@@ -11,4 +11,5 @@ dist/
 .DS_Store
 oss-strategy.md
 
+# Scratch/research docs stay local; ./plans (implementation plans) IS tracked.
 /docs/
