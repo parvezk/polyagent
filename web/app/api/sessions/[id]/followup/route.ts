@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { StateStore, STATE_PATH, buildAdapter } from "@/lib/core";
+import { buildAdapter } from "@/lib/core";
+import { getSession } from "@/lib/sessions-store";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +12,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     return NextResponse.json({ error: "message is required" }, { status: 400 });
   }
 
-  const session = new StateStore(STATE_PATH).get(id);
+  const session = await getSession(id); // RLS ensures it's the user's own
   if (!session) {
     return NextResponse.json({ error: "Session not found" }, { status: 404 });
   }

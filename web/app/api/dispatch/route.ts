@@ -1,10 +1,16 @@
 import { NextResponse } from "next/server";
-import { buildAdapter, StateStore, STATE_PATH, type Vendor } from "@/lib/core";
+import { buildAdapter, type Vendor } from "@/lib/core";
+import { currentUserId, toDbRow, upsertSession } from "@/lib/sessions-store";
 
 export const dynamic = "force-dynamic";
 
 // POST /api/dispatch — { vendor, prompt, repo?, model? }
 export async function POST(req: Request) {
+  const userId = await currentUserId();
+  if (!userId) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
   let body: { vendor?: Vendor; prompt?: string; repo?: string; model?: string };
   try {
     body = await req.json();
@@ -22,7 +28,7 @@ export async function POST(req: Request) {
 
   try {
     const session = await buildAdapter(vendor).dispatch({ prompt, repo, model });
-    new StateStore(STATE_PATH).upsert(session);
+    await upsertSession(toDbRow(session, userId));
     return NextResponse.json({ session });
   } catch (err) {
     return NextResponse.json(

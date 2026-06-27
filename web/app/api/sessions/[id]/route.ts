@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
-import { StateStore, STATE_PATH, buildAdapter } from "@/lib/core";
+import { buildAdapter } from "@/lib/core";
+import { getSession, patchSession } from "@/lib/sessions-store";
 
 export const dynamic = "force-dynamic";
 
-// GET /api/sessions/:id — detail: live status + output/conversation.
+// GET /api/sessions/:id — detail: live status + output/conversation (RLS-scoped).
 export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
-  const store = new StateStore(STATE_PATH);
-  const session = store.get(id);
+  const session = await getSession(id);
   if (!session) {
     return NextResponse.json({ error: "Session not found" }, { status: 404 });
   }
@@ -21,7 +21,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
     const live = await adapter.getStatus(id);
     status = live.status;
     summary = live.summary;
-    store.upsert({ ...session, status: live.status, lastPolled: live.lastUpdate.toISOString() });
+    await patchSession(id, { status: live.status, last_polled: live.lastUpdate.toISOString() });
   } catch {
     /* keep last-known */
   }
@@ -38,9 +38,17 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   }
 
   return NextResponse.json({
-    session: { ...session, status },
+    session: {
+      id: session.id,
+      vendor: session.vendor,
+      label: session.label ?? "",
+      status,
+      dispatchedAt: session.dispatched_at,
+      lastUpdate: session.last_polled ?? session.dispatched_at,
+      outputUrl: session.output_url ?? undefined,
+    },
     summary,
-    firstMessage: session.firstMessage,
+    firstMessage: session.first_message ?? undefined,
     messages,
   });
 }

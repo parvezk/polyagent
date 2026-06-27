@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { IBM_Plex_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
+import { UserMenu } from "@/components/user-menu";
 
 const sans = IBM_Plex_Sans({
   variable: "--font-sans",
@@ -24,7 +25,12 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           <div className="mx-auto flex max-w-[1100px] items-center gap-3 px-6 py-3">
             <span className="text-[#D97757]">◆</span>
             <span className="font-semibold tracking-tight">PolyAgent</span>
-            <span className="text-sm text-zinc-500">· vendor-agnostic agent control plane</span>
+            <span className="hidden text-sm text-zinc-500 sm:inline">
+              · vendor-agnostic agent control plane
+            </span>
+            <div className="ml-auto">
+              <UserMenu />
+            </div>
           </div>
         </header>
         <main className="mx-auto w-full max-w-[1100px] flex-1 px-6 py-7">{children}</main>
