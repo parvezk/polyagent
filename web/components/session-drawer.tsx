@@ -1,145 +1,239 @@
-"use client";
-
-import { useEffect, useState } from "react";
-import useSWR, { mutate } from "swr";
-import { toast } from "sonner";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { useState, useRef, useEffect, useCallback } from "react";
+import useSWR from "swr";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
+import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { StatusBadge } from "@/components/status-badge";
-import { VendorIcon, VENDOR_META } from "@/components/vendor-icon";
-import { type SessionView } from "@/lib/view";
+import { StatusBadge } from "./status-badge";
+import { TelemetryStrip } from "./telemetry-strip";
+import type { AgentOutput, SessionStatus } from "@/lib/core";
+import {
+  SendIcon,
+  ExternalLinkIcon,
+  CodeIcon,
+  BotIcon,
+  UserIcon,
+  ArrowRightIcon,
+} from "lucide-react";
 
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
-
-interface DetailResponse {
-  session: SessionView;
-  summary?: string;
-  firstMessage?: string;
-  messages: { role: string; content: string; timestamp: string }[];
+interface DrawerProps {
+  session: {
+    id: string;
+    vendor: string;
+    label: string;
+    status: SessionStatus;
+    summary?: string;
+    outputUrl?: string;
+  } | null;
+  onClose: () => void;
+  onFollowupSent: () => void;
 }
 
-export function SessionDrawer({
-  session,
-  onClose,
-}: {
-  session: SessionView | null;
-  onClose: () => void;
-}) {
+export function SessionDrawer({ session, onClose, onFollowupSent }: DrawerProps) {
   const [message, setMessage] = useState("");
-  const [sending, setSending] = useState(false);
-  // Optimistically-shown follow-ups (server output may not echo them back).
-  const [sent, setSent] = useState<string[]>([]);
+  const [sent, setSent] = useState<{ role: "human"; content: string }[]>([]);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Reset optimistic messages when switching sessions.
-  useEffect(() => {
-    setSent([]);
-    setMessage("");
-  }, [session?.id]);
+  // Track previous session ID to handle resetting state when it changes
+  const prevSessionIdRef = useRef<string | undefined>(undefined);
 
-  const { data } = useSWR<DetailResponse>(
+  // We need to fetch the detailed interaction history (messages).
+  const { data, mutate } = useSWR<AgentOutput>(
     session ? `/api/sessions/${session.id}` : null,
-    fetcher,
-    { refreshInterval: 4000 },
+    (url) => fetch(url).then((r) => r.json()),
+    { refreshInterval: session?.status === "running" ? 3000 : 0 },
   );
 
-  async function sendFollowup() {
-    if (!session) return;
-    setSending(true);
-    try {
-      const res = await fetch(`/api/sessions/${session.id}/followup`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message }),
-      });
-      const d = await res.json();
-      if (!res.ok) throw new Error(d.error ?? "Follow-up failed");
-      toast.success("Follow-up sent");
-      setSent((prev) => [...prev, message]); // optimistic — show it immediately
+  // Instead of an effect, handle the reset during render if the session changed
+  // This is the React 18+ recommended way to reset state on prop change
+  if (session?.id !== prevSessionIdRef.current) {
+    prevSessionIdRef.current = session?.id;
+    if (sent.length > 0) {
+      setSent([]);
+    }
+    if (message !== "") {
       setMessage("");
-      mutate(`/api/sessions/${session.id}`);
-      mutate("/api/sessions");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Follow-up failed");
-    } finally {
-      setSending(false);
     }
   }
 
-  const messages = data?.messages ?? [];
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [data?.messages, sent]);
+
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!session || !message.trim()) return;
+
+      const txt = message;
+      setMessage("");
+      setSent((prev) => [...prev, { role: "human", content: txt }]);
+
+      await fetch(`/api/sessions/${session.id}/followup`, {
+        method: "POST",
+        body: JSON.stringify({ message: txt }),
+      });
+
+      mutate();
+      onFollowupSent();
+    },
+    [session, message, mutate, onFollowupSent],
+  );
+
+  if (!session) return null;
 
   return (
-    <Sheet open={!!session} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent className="flex w-full flex-col border-l-2 border-l-[#D97757]/40 bg-zinc-950 text-zinc-100 sm:max-w-xl">
-        {session && (
-          <>
-            <SheetHeader className="space-y-2">
-              <div className="flex items-center gap-3">
-                <span className="flex items-center gap-2 text-sm font-semibold text-zinc-200">
-                  <VendorIcon vendor={session.vendor} className="size-4" />
-                  {VENDOR_META[session.vendor]?.label ?? session.vendor}
-                </span>
-                <StatusBadge status={session.status} />
+    <Sheet open={!!session} onOpenChange={(open) => !open && onClose()}>
+      <SheetContent
+        className="flex w-full flex-col p-0 sm:max-w-2xl bg-zinc-950 border-l border-zinc-800"
+        hideClose
+      >
+        <div className="flex flex-col border-b border-zinc-800 p-6 pt-10 relative">
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 p-2 text-zinc-500 hover:text-zinc-300 rounded-md hover:bg-zinc-900 transition-colors"
+          >
+            <ArrowRightIcon className="h-5 w-5" />
+            <span className="sr-only">Close panel</span>
+          </button>
+
+          <div className="flex items-center gap-3 mb-2 pr-8">
+            <StatusBadge status={session.status} />
+            <Badge variant="outline" className="text-xs uppercase bg-zinc-900 border-zinc-800">
+              {session.vendor}
+            </Badge>
+            {session.outputUrl && (
+              <a
+                href={session.outputUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1 bg-blue-500/10 px-2 py-0.5 rounded-full border border-blue-500/20 transition-colors"
+              >
+                View Output <ExternalLinkIcon className="h-3 w-3" />
+              </a>
+            )}
+          </div>
+
+          <SheetHeader className="text-left space-y-1 pr-8">
+            <SheetTitle className="text-xl font-medium tracking-tight truncate leading-tight">
+              {session.label || "Untitled Task"}
+            </SheetTitle>
+            {session.summary && (
+              <SheetDescription className="text-sm text-zinc-400 line-clamp-2 leading-relaxed">
+                {session.summary}
+              </SheetDescription>
+            )}
+          </SheetHeader>
+        </div>
+
+        <div ref={scrollRef} className="flex-1 overflow-y-auto bg-zinc-950 p-6 space-y-6">
+          {data?.messages?.length === 0 && sent.length === 0 ? (
+            <div className="h-full flex flex-col items-center justify-center text-zinc-500 space-y-4">
+              <div className="h-12 w-12 rounded-full bg-zinc-900 flex items-center justify-center">
+                <CodeIcon className="h-6 w-6 opacity-50" />
               </div>
-              <SheetTitle className="text-left text-base font-normal text-zinc-200">
-                {session.label}
-              </SheetTitle>
-              <p className="font-mono text-[11px] text-zinc-600">{session.id}</p>
-            </SheetHeader>
-
-            <div className="flex-1 space-y-3 overflow-y-auto px-1 py-4">
-              {data?.firstMessage && (
-                <Message role="agent" content={data.firstMessage} />
-              )}
-              {messages.map((m, i) => (
-                <Message key={i} role={m.role} content={m.content} />
-              ))}
-              {sent.map((m, i) => (
-                <Message key={`sent-${i}`} role="human" content={m} />
-              ))}
-              {!data?.firstMessage && messages.length === 0 && sent.length === 0 && (
-                <p className="py-8 text-center text-xs text-zinc-600">
-                  No output yet — the agent is working.
-                </p>
-              )}
+              <p className="text-sm text-center max-w-xs">
+                Waiting for the agent to report progress...
+              </p>
             </div>
+          ) : (
+            <>
+              {data?.messages?.map((msg, idx) => (
+                <div key={idx} className="flex gap-4 group">
+                  <div className="flex-shrink-0 mt-1">
+                    {msg.role === "agent" ? (
+                      <div className="h-8 w-8 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+                        <BotIcon className="h-4 w-4 text-blue-400" />
+                      </div>
+                    ) : (
+                      <div className="h-8 w-8 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center">
+                        <UserIcon className="h-4 w-4 text-zinc-300" />
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-medium text-zinc-300">
+                        {msg.role === "agent" ? "Agent" : "You"}
+                      </span>
+                      <span className="text-xs text-zinc-600 font-mono">
+                        {new Date(msg.timestamp).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          second: "2-digit",
+                        })}
+                      </span>
+                    </div>
+                    <div className="text-sm text-zinc-400 whitespace-pre-wrap leading-relaxed prose prose-invert max-w-none">
+                      {msg.content}
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {sent.map((msg, idx) => (
+                <div key={`sent-${idx}`} className="flex gap-4 group opacity-70">
+                  <div className="flex-shrink-0 mt-1">
+                    <div className="h-8 w-8 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center">
+                      <UserIcon className="h-4 w-4 text-zinc-300" />
+                    </div>
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-medium text-zinc-300">You</span>
+                      <span className="text-xs text-zinc-500">Sending...</span>
+                    </div>
+                    <div className="text-sm text-zinc-400 whitespace-pre-wrap leading-relaxed">
+                      {msg.content}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+        </div>
 
-            <div className="space-y-2 border-t border-zinc-800 pt-4">
+        {session.status === "needs_review" && (
+          <div className="border-t border-zinc-800 bg-zinc-950 p-4">
+            <form onSubmit={handleSubmit} className="flex gap-3">
               <Textarea
+                placeholder="Provide feedback or instructions..."
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="Send a follow-up to steer the agent…"
-                className="min-h-20 border-zinc-800 bg-zinc-900"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    if (message.trim()) {
+                      const event = new Event("submit", { cancelable: true });
+                      e.currentTarget.form?.dispatchEvent(event);
+                    }
+                  }
+                }}
+                className="flex-1 min-h-[44px] max-h-[200px] resize-none py-3 bg-zinc-900 border-zinc-800 focus:border-zinc-700 focus:ring-1 focus:ring-zinc-700 text-sm"
+                rows={1}
               />
               <Button
-                onClick={sendFollowup}
-                disabled={sending || !message.trim()}
-                className="w-full bg-[#D97757] text-zinc-950 hover:bg-[#c8694a]"
+                type="submit"
+                disabled={!message.trim()}
+                size="icon"
+                className="flex-shrink-0 h-[44px] w-[44px] bg-white text-black hover:bg-zinc-200 transition-colors"
               >
-                {sending ? "Sending…" : "Send follow-up"}
+                <SendIcon className="h-4 w-4" />
+                <span className="sr-only">Send</span>
               </Button>
-            </div>
-          </>
+            </form>
+          </div>
         )}
+
+        <TelemetryStrip id={session.id} vendor={session.vendor} status={session.status} />
       </SheetContent>
     </Sheet>
-  );
-}
-
-function Message({ role, content }: { role: string; content: string }) {
-  const isAgent = role === "agent";
-  return (
-    <div
-      className={`rounded-lg border px-3 py-2 text-sm ${
-        isAgent
-          ? "border-zinc-800 bg-zinc-900/50 text-zinc-200"
-          : "border-[#D97757]/40 bg-[#D97757]/10 text-orange-100"
-      }`}
-    >
-      <div className="mb-1 text-[10px] uppercase tracking-wider text-zinc-500">
-        {isAgent ? "agent" : "you"}
-      </div>
-      <div className="whitespace-pre-wrap">{content}</div>
-    </div>
   );
 }

@@ -31,6 +31,8 @@
     "@cursor/sdk": "^1.0.22",
     "commander": "^15.0.0",
     "dotenv": "^17.4.2",
+    "next": "^16.2.10",
+    "p-limit": "^7.3.0",
     "picocolors": "^1.1.1"
   },
   "devDependencies": {

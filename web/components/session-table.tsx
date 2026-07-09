@@ -48,9 +48,7 @@ export function SessionTable({ onSelect }: { onSelect: (s: SessionView) => void 
                 key={s.id}
                 onClick={() => onSelect(s)}
                 className={`cursor-pointer border-b border-zinc-900 transition-colors hover:bg-zinc-900/60 ${
-                  needsYou
-                    ? "bg-amber-400/[0.07] shadow-[inset_3px_0_0_0_rgb(251,191,36)]"
-                    : ""
+                  needsYou ? "bg-amber-400/[0.07] shadow-[inset_3px_0_0_0_rgb(251,191,36)]" : ""
                 }`}
               >
                 <td className="px-4 py-2.5 font-mono text-xs text-zinc-600">{i + 1}</td>
