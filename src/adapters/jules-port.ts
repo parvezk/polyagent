@@ -93,12 +93,12 @@ async function resolveGithubSource(
       };
     }[];
   };
-  const [owner, repo] = repoParam.split("/");
+  const [owner, repo] = repoParam.toLowerCase().split("/");
   const sources = sourcesResp.sources ?? [];
   const found = sources.find(
-    (s) =>
-      s.githubRepo?.owner.toLowerCase() === owner?.toLowerCase() &&
-      s.githubRepo?.repo.toLowerCase() === repo?.toLowerCase(),
+    ({ githubRepo }) =>
+      githubRepo?.owner.toLowerCase() === owner &&
+      githubRepo?.repo.toLowerCase() === repo,
   );
   if (!found) {
     const available = sources
