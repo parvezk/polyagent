@@ -7,5 +7,7 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   // Run on all routes except static assets and the API (API does its own auth check).
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|api|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|api|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+  ],
 };

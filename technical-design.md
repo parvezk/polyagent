@@ -10,7 +10,7 @@ PolyAgent is a **vendor-agnostic dispatch and orchestration layer** for cloud co
 
 A vendor-adapter pattern normalizes every platform into a common interface. **PolyAgent owns dispatch**: it starts the agent, so the vendor hands back the session ID directly. That ID is how PolyAgent tracks and follows up. No copy-pasting IDs, no guessing whether a list endpoint surfaces dashboard-started sessions.
 
-**Why dispatch-first (changed from the March 2026 draft):** the original plan was "track-first," built around registering or auto-discovering sessions a user started in a vendor dashboard. That premise no longer holds. As of April–May 2026, every viable vendor ships a clean **dispatch + poll-by-ID + follow-up** API. Meanwhile, discovering *externally-started* sessions is unconfirmed for every vendor and impossible for Claude (claude.ai sessions live behind subscription auth, unreachable by API key). Dispatch-first is both more reliable and removes the biggest risk in the old design.
+**Why dispatch-first (changed from the March 2026 draft):** the original plan was "track-first," built around registering or auto-discovering sessions a user started in a vendor dashboard. That premise no longer holds. As of April–May 2026, every viable vendor ships a clean **dispatch + poll-by-ID + follow-up** API. Meanwhile, discovering _externally-started_ sessions is unconfirmed for every vendor and impossible for Claude (claude.ai sessions live behind subscription auth, unreachable by API key). Dispatch-first is both more reliable and removes the biggest risk in the old design.
 
 **Out of scope:** tracking sessions a user started elsewhere (in a vendor dashboard). If PolyAgent can spin up and track the session itself, there's no reason to context-switch back to the vendor UI — which is the whole point. Revisit only if a concrete use case emerges.
 
@@ -18,15 +18,15 @@ A vendor-adapter pattern normalizes every platform into a common interface. **Po
 
 ## Vendor Capability Matrix (validated 2026-06-22)
 
-| Vendor | Dispatch | Track by ID | Follow-up | Surface | Maturity | V1? |
-|---|---|---|---|---|---|---|
-| **Claude** | ✅ Managed Agents `POST /v1/sessions` (cloud) | ✅ poll + SSE | ✅ `POST /sessions/{id}/events` | Official `anthropic` SDK (`beta.agents`) | Beta | **Yes (V1)** |
-| **Jules** | ✅ `POST /v1alpha/sessions` | ✅ poll session + activities | ✅ `:sendMessage` | Raw REST (`X-Goog-Api-Key`) + CLI | v1alpha | **Yes (V1)** |
-| **Gemini / Antigravity** | ✅ Interactions API (`background=true`) | ✅ poll by `interaction.id` | ✅ `previous_interaction_id` | REST + `@google/genai` SDK | Preview | V2 |
-| **Cursor** | ✅ `POST /v1/agents` | ✅ poll runs + SSE | ✅ `POST /agents/{id}/runs` | Official `@cursor/sdk` (TS) | Beta | Deferred |
-| **Codex** | ⚠️ CLI only (`codex cloud exec`) | ⚠️ CLI only | ❌ none | CLI shelling + ChatGPT login | partial | **Omitted** |
+| Vendor                   | Dispatch                                      | Track by ID                  | Follow-up                       | Surface                                  | Maturity | V1?          |
+| ------------------------ | --------------------------------------------- | ---------------------------- | ------------------------------- | ---------------------------------------- | -------- | ------------ |
+| **Claude**               | ✅ Managed Agents `POST /v1/sessions` (cloud) | ✅ poll + SSE                | ✅ `POST /sessions/{id}/events` | Official `anthropic` SDK (`beta.agents`) | Beta     | **Yes (V1)** |
+| **Jules**                | ✅ `POST /v1alpha/sessions`                   | ✅ poll session + activities | ✅ `:sendMessage`               | Raw REST (`X-Goog-Api-Key`) + CLI        | v1alpha  | **Yes (V1)** |
+| **Gemini / Antigravity** | ✅ Interactions API (`background=true`)       | ✅ poll by `interaction.id`  | ✅ `previous_interaction_id`    | REST + `@google/genai` SDK               | Preview  | V2           |
+| **Cursor**               | ✅ `POST /v1/agents`                          | ✅ poll runs + SSE           | ✅ `POST /agents/{id}/runs`     | Official `@cursor/sdk` (TS)              | Beta     | Deferred     |
+| **Codex**                | ⚠️ CLI only (`codex cloud exec`)              | ⚠️ CLI only                  | ❌ none                         | CLI shelling + ChatGPT login             | partial  | **Omitted**  |
 
-**V1 pair = Claude + Jules** — a deliberate *managed-agent SDK* (Claude) + *raw-API* (Jules) split, and a *general-sandbox* + *repo→PR* shape contrast that stress-tests the abstraction.
+**V1 pair = Claude + Jules** — a deliberate _managed-agent SDK_ (Claude) + _raw-API_ (Jules) split, and a _general-sandbox_ + _repo→PR_ shape contrast that stress-tests the abstraction.
 
 **Cursor is deferred** (not omitted): its Cloud Agents API requires a **paid Pro account** ($20/mo) — confirmed in-dashboard ("Cloud Agents requires a Pro Account"). It slots into the same adapter shape as Jules whenever a subscription is in place.
 
@@ -38,7 +38,7 @@ A vendor-adapter pattern normalizes every platform into a common interface. **Po
 
 ## V1 Scope
 
-**Two vendors, one loop, end-to-end.** Claude + Jules. Proving the loop on *two* vendors (not one) is what validates the cross-vendor normalization — one vendor proves nothing about the abstraction.
+**Two vendors, one loop, end-to-end.** Claude + Jules. Proving the loop on _two_ vendors (not one) is what validates the cross-vendor normalization — one vendor proves nothing about the abstraction.
 
 Two steps, built and verified incrementally (follow-up is V3):
 
@@ -47,7 +47,7 @@ Two steps, built and verified incrementally (follow-up is V3):
 
 Keys load from `.env.local` (`ANTHROPIC_API_KEY`, `JULES_API_KEY`). See the full task breakdown in `docs/plans/2026-06-23-polyagent-mvp.md`.
 
-**Target:** working loop on both vendors before *Built in NYC with Vercel* (2026-06-27).
+**Target:** working loop on both vendors before _Built in NYC with Vercel_ (2026-06-27).
 
 ---
 
@@ -126,27 +126,27 @@ type SessionStatus = "running" | "needs_review" | "completed" | "failed" | "unkn
 
 interface DispatchRequest {
   prompt: string;
-  repo?: string;            // owner/repo — for repo-based agents (Cursor, Jules)
+  repo?: string; // owner/repo — for repo-based agents (Cursor, Jules)
   branch?: string;
   model?: string;
   // vendor-specific extras pass through a typed `options` bag per adapter
 }
 
 interface AgentSession {
-  id: string;               // Vendor-native session/agent ID
+  id: string; // Vendor-native session/agent ID
   vendor: string;
-  label?: string;           // Task title / description
+  label?: string; // Task title / description
   status: SessionStatus;
   startedAt?: Date;
-  outputUrl?: string;       // Generic output reference — PR URL, branch link, OR sandbox/run URL.
-                            // Not assumed to be a PR; repo→PR is one vendor shape, not the contract.
+  outputUrl?: string; // Generic output reference — PR URL, branch link, OR sandbox/run URL.
+  // Not assumed to be a PR; repo→PR is one vendor shape, not the contract.
 }
 
 interface AgentStatus {
   status: SessionStatus;
   lastUpdate: Date;
-  summary?: string;         // Last message or status text
-  needsInput: boolean;      // True if the agent is waiting on a human
+  summary?: string; // Last message or status text
+  needsInput: boolean; // True if the agent is waiting on a human
 }
 
 interface AgentOutput {
@@ -225,9 +225,9 @@ polyagent output <session-id>
 ## Tech Stack
 
 - **Language:** TypeScript (Node 20+, ESM).
-- **Vendor adapters:** wrap the official SDK where one exists, else a thin `fetch` wrapper — both behind a per-vendor *port* so the adapter/tests don't know the difference.
-  - Claude (V1) → `@anthropic-ai/sdk` (`beta.agents` / Managed Agents) — *managed-agent SDK*
-  - Jules (V1) → raw `fetch` (`X-Goog-Api-Key`, no official JS SDK) — *raw-API integration*
+- **Vendor adapters:** wrap the official SDK where one exists, else a thin `fetch` wrapper — both behind a per-vendor _port_ so the adapter/tests don't know the difference.
+  - Claude (V1) → `@anthropic-ai/sdk` (`beta.agents` / Managed Agents) — _managed-agent SDK_
+  - Jules (V1) → raw `fetch` (`X-Goog-Api-Key`, no official JS SDK) — _raw-API integration_
   - Gemini/Antigravity (V2) → `@google/genai` (Interactions API)
   - Cursor (deferred) → `@cursor/sdk` (requires paid Pro)
 - **Keys:** `dotenv` → `.env.local` (`ANTHROPIC_API_KEY`, `JULES_API_KEY`).

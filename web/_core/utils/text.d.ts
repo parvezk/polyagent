@@ -8,7 +8,7 @@ export declare function labelFromPrompt(prompt: string, maxLength?: number): str
  * a clone instruction so a repo/branch becomes a structured input, not prose.
  */
 export declare function withRepoInstruction(req: {
-    prompt: string;
-    repo?: string;
-    branch?: string;
+  prompt: string;
+  repo?: string;
+  branch?: string;
 }): string;

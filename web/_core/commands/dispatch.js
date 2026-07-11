@@ -10,36 +10,31 @@ import { DEFAULT_CLAUDE_MODEL } from "../constants/claude.js";
  * model, so no prompt there.
  */
 async function resolveModel(opts) {
-    if (opts.model)
-        return opts.model;
-    if (opts.vendor !== "claude")
-        return undefined;
-    if (!stdin.isTTY)
-        return DEFAULT_CLAUDE_MODEL; // non-interactive (smoke/CI)
-    const rl = createInterface({ input: stdin, output: stdout });
-    const answer = (await rl.question(`Model for Claude [${DEFAULT_CLAUDE_MODEL}]: `)).trim();
-    rl.close();
-    return answer || DEFAULT_CLAUDE_MODEL;
+  if (opts.model) return opts.model;
+  if (opts.vendor !== "claude") return undefined;
+  if (!stdin.isTTY) return DEFAULT_CLAUDE_MODEL; // non-interactive (smoke/CI)
+  const rl = createInterface({ input: stdin, output: stdout });
+  const answer = (await rl.question(`Model for Claude [${DEFAULT_CLAUDE_MODEL}]: `)).trim();
+  rl.close();
+  return answer || DEFAULT_CLAUDE_MODEL;
 }
 export async function dispatchCommand(prompt, opts) {
-    if (opts.vendor === "jules" && !opts.repo) {
-        console.error('Jules needs a repo: polyagent dispatch --vendor jules --repo owner/repo "..."');
-        process.exitCode = 1;
-        return;
-    }
-    const model = await resolveModel(opts);
-    const adapter = buildAdapter(opts.vendor);
-    const session = await adapter.dispatch({
-        prompt,
-        repo: opts.repo,
-        branch: opts.branch,
-        model,
-    });
-    new StateStore(STATE_PATH).upsert(session);
-    console.log(`Dispatched ${session.vendor} session ${session.id} (${session.status})`);
-    console.log(`  label: ${session.label}`);
-    if (session.outputUrl)
-        console.log(`  output: ${session.outputUrl}`);
-    if (session.firstMessage)
-        console.log(`  first reply: ${session.firstMessage}`);
+  if (opts.vendor === "jules" && !opts.repo) {
+    console.error('Jules needs a repo: polyagent dispatch --vendor jules --repo owner/repo "..."');
+    process.exitCode = 1;
+    return;
+  }
+  const model = await resolveModel(opts);
+  const adapter = buildAdapter(opts.vendor);
+  const session = await adapter.dispatch({
+    prompt,
+    repo: opts.repo,
+    branch: opts.branch,
+    model,
+  });
+  new StateStore(STATE_PATH).upsert(session);
+  console.log(`Dispatched ${session.vendor} session ${session.id} (${session.status})`);
+  console.log(`  label: ${session.label}`);
+  if (session.outputUrl) console.log(`  output: ${session.outputUrl}`);
+  if (session.firstMessage) console.log(`  first reply: ${session.firstMessage}`);
 }

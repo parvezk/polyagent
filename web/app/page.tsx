@@ -53,7 +53,7 @@ export default function DashboardPage() {
       </div>
 
       <SessionTable onSelect={setSelected} />
-      <SessionDrawer session={selected} onClose={() => setSelected(null)} />
+      <SessionDrawer session={selected} onClose={() => setSelected(null)} onFollowupSent={() => {}} />
     </div>
   );
 }

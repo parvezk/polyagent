@@ -7,7 +7,7 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
-import { Badge } from "@/components/ui/Badge";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "./status-badge";
@@ -94,7 +94,7 @@ export function SessionDrawer({ session, onClose, onFollowupSent }: DrawerProps)
     <Sheet open={!!session} onOpenChange={(open) => !open && onClose()}>
       <SheetContent
         className="flex w-full flex-col p-0 sm:max-w-2xl bg-zinc-950 border-l border-zinc-800"
-        hideClose
+        showCloseButton={false}
       >
         <div className="flex flex-col border-b border-zinc-800 p-6 pt-10 relative">
           <button
@@ -232,7 +232,7 @@ export function SessionDrawer({ session, onClose, onFollowupSent }: DrawerProps)
           </div>
         )}
 
-        <TelemetryStrip id={session.id} vendor={session.vendor} status={session.status} />
+        <TelemetryStrip />
       </SheetContent>
     </Sheet>
   );
