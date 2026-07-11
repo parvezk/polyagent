@@ -2,8 +2,7 @@
 // Usage: npx tsx scripts/smoke-claude.ts ["prompt"]
 import { buildAdapter } from "../src/registry.js";
 
-const prompt =
-  process.argv[2] ?? "Create a Python script that prints the first 10 primes, then run it.";
+const prompt = process.argv[2] ?? "Create a Python script that prints the first 10 primes, then run it.";
 
 const adapter = buildAdapter("claude");
 const session = await adapter.dispatch({ prompt });

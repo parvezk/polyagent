@@ -33,8 +33,8 @@ export async function updateSession(request: NextRequest) {
   const { data } = await supabase.auth.getClaims();
   const user = data?.claims;
 
-  const isAuthRoute =
-    request.nextUrl.pathname.startsWith("/login") || request.nextUrl.pathname.startsWith("/auth");
+  const isAuthRoute = request.nextUrl.pathname.startsWith("/login") ||
+    request.nextUrl.pathname.startsWith("/auth");
 
   // Unauthenticated → bounce to /login (except auth routes themselves).
   if (!user && !isAuthRoute) {

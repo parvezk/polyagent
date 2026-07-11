@@ -1,6 +1,11 @@
 // Client-safe view types + styling (no server/core imports — safe in client components).
 
-export type SessionStatus = "running" | "needs_review" | "completed" | "failed" | "unknown";
+export type SessionStatus =
+  | "running"
+  | "needs_review"
+  | "completed"
+  | "failed"
+  | "unknown";
 
 export interface SessionView {
   id: string;

@@ -5,7 +5,7 @@ export default defineConfig({
   test: {
     include: ["test/**/*.test.ts"],
     alias: {
-      "@": path.resolve(__dirname, "./web"),
-    },
+      "@": path.resolve(__dirname, "./web")
+    }
   },
 });

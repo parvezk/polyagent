@@ -14,10 +14,7 @@ function fakePort(over?: Partial<CursorPort>): CursorPort {
 describe("CursorAdapter", () => {
   it("dispatch returns normalized session with vendor 'cursor', id from agentId, status 'running', label from prompt", async () => {
     const adapter = new CursorAdapter(fakePort());
-    const session = await adapter.dispatch({
-      prompt: "Fix the bug\nMore details here",
-      repo: "owner/repo",
-    });
+    const session = await adapter.dispatch({ prompt: "Fix the bug\nMore details here", repo: "owner/repo" });
 
     expect(session.vendor).toBe("cursor");
     expect(session.id).toBe("bc-cursor-1");
