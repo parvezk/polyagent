@@ -109,6 +109,7 @@ export function SessionDrawer({
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 placeholder="Send a follow-up to steer the agent…"
+                aria-label="Follow-up message"
                 className="min-h-20 border-zinc-800 bg-zinc-900"
               />
               <Button
