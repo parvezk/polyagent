@@ -93,8 +93,8 @@ export function NewAgentModal() {
 
         <div className="space-y-4 py-2">
           {/* Vendor — icon radio tiles */}
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium text-zinc-400">Vendor</label>
+          <div className="space-y-1.5" role="radiogroup" aria-labelledby="vendor-label">
+            <label id="vendor-label" className="text-xs font-medium text-zinc-400">Vendor</label>
             <div className="grid grid-cols-4 gap-2">
               {VENDORS.map((v) => {
                 const selected = v === vendor;
@@ -102,6 +102,8 @@ export function NewAgentModal() {
                   <button
                     key={v}
                     type="button"
+                    role="radio"
+                    aria-checked={selected}
                     onClick={() => setVendor(v)}
                     className={`flex flex-col items-center gap-1.5 rounded-lg border px-2 py-3 transition-all ${
                       selected
@@ -124,12 +126,12 @@ export function NewAgentModal() {
 
           {/* Repo (+ branch) */}
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-zinc-400">
+            <label htmlFor="repo-select" className="text-xs font-medium text-zinc-400">
               Repo {repoRequired(vendor) ? "" : <span className="text-zinc-600">(optional)</span>}
             </label>
             {vendor === "jules" ? (
               <Select value={repo} onValueChange={(v) => v && setRepo(v)}>
-                <SelectTrigger className="border-zinc-700 bg-zinc-950/50">
+                <SelectTrigger id="repo-select" className="border-zinc-700 bg-zinc-950/50">
                   <SelectValue placeholder="Select a connected repo" />
                 </SelectTrigger>
                 <SelectContent className="border-zinc-700 bg-zinc-900 text-zinc-100">
@@ -143,6 +145,7 @@ export function NewAgentModal() {
             ) : (
               <div className="grid grid-cols-3 gap-2">
                 <Input
+                  id="repo-select"
                   value={repo}
                   onChange={(e) => setRepo(e.target.value)}
                   placeholder="owner/repo"
@@ -160,9 +163,9 @@ export function NewAgentModal() {
 
           {vendor === "claude" && (
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-zinc-400">Model</label>
+              <label htmlFor="model-select" className="text-xs font-medium text-zinc-400">Model</label>
               <Select value={model} onValueChange={(v) => v && setModel(v)}>
-                <SelectTrigger className="border-zinc-700 bg-zinc-950/50">
+                <SelectTrigger id="model-select" className="border-zinc-700 bg-zinc-950/50">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="border-zinc-700 bg-zinc-900 text-zinc-100">
@@ -177,8 +180,9 @@ export function NewAgentModal() {
           )}
 
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-zinc-400">Task</label>
+            <label htmlFor="task-textarea" className="text-xs font-medium text-zinc-400">Task</label>
             <Textarea
+              id="task-textarea"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               placeholder="e.g. Identify any security/XSS flaws in the repo"
