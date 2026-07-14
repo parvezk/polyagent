@@ -21,8 +21,10 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
     await buildAdapter(session.vendor).sendFollowup(id, message);
     return NextResponse.json({ ok: true });
   } catch (err) {
+    // SECURITY: Log error internally but return generic message to client to prevent info leakage
+    console.error("Follow-up error:", err);
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : String(err) },
+      { error: "An internal error occurred" },
       { status: 502 },
     );
   }

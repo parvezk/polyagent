@@ -31,8 +31,10 @@ export async function POST(req: Request) {
     await upsertSession(toDbRow(session, userId));
     return NextResponse.json({ session });
   } catch (err) {
+    // SECURITY: Log error internally but return generic message to client to prevent info leakage
+    console.error("Dispatch error:", err);
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : String(err) },
+      { error: "An internal error occurred" },
       { status: 502 },
     );
   }
