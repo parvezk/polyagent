@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import useSWR, { mutate } from "swr";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -32,10 +32,12 @@ export function SessionDrawer({
   const [sent, setSent] = useState<string[]>([]);
 
   // Reset optimistic messages when switching sessions.
-  useEffect(() => {
+  const [prevSessionId, setPrevSessionId] = useState(session?.id);
+  if (session?.id !== prevSessionId) {
+    setPrevSessionId(session?.id);
     setSent([]);
     setMessage("");
-  }, [session?.id]);
+  }
 
   const { data } = useSWR<DetailResponse>(
     session ? `/api/sessions/${session.id}` : null,
