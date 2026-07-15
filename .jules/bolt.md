@@ -1,0 +1,1 @@
+## 2024-07-15 - Stop polling terminal states\n**Learning:** API route was unnecessarily calling external APIs and patching DB for every listed session on every poll interval, even completed/failed ones.\n**Action:** Add a terminal state check before polling external API status.
