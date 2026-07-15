@@ -47,9 +47,16 @@ export function SessionTable({ onSelect }: { onSelect: (s: SessionView) => void 
               <tr
                 key={s.id}
                 onClick={() => onSelect(s)}
-                className={`cursor-pointer border-b border-zinc-900 transition-colors hover:bg-zinc-900/60 ${
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onSelect(s);
+                  }
+                }}
+                tabIndex={0}
+                className={`cursor-pointer border-b border-zinc-900 transition-colors hover:bg-zinc-900/60 focus-visible:bg-zinc-900/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-700 ${
                   needsYou
-                    ? "bg-amber-400/[0.07] shadow-[inset_3px_0_0_0_rgb(251,191,36)]"
+                    ? "bg-amber-400/[0.07] shadow-[inset_3px_0_0_0_rgb(251,191,36)] focus-visible:ring-amber-400/50"
                     : ""
                 }`}
               >
