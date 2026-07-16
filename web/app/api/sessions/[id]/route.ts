@@ -1,11 +1,16 @@
 import { NextResponse } from "next/server";
 import { buildAdapter } from "@/lib/core";
-import { getSession, patchSession } from "@/lib/sessions-store";
+import { currentUserId, getSession, patchSession } from "@/lib/sessions-store";
 
 export const dynamic = "force-dynamic";
 
 // GET /api/sessions/:id — detail: live status + output/conversation (RLS-scoped).
 export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
+  const userId = await currentUserId();
+  if (!userId) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
   const { id } = await ctx.params;
   const session = await getSession(id);
   if (!session) {

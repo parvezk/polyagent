@@ -1,0 +1,4 @@
+## 2024-05-24 - Missing Explicit Authentication on Next.js API Routes
+**Vulnerability:** Next.js API endpoints (`/api/jules/sources`, `/api/sessions`, etc.) were missing explicit authentication checks, despite relying on authentication context.
+**Learning:** Next.js middleware in this project excludes `/api` paths (`matcher: ["/((?!...api...).*)"]`). If an API endpoint doesn't explicitly verify the user (e.g., via `currentUserId()`), it remains open to the public. Relying solely on RLS provides some protection (data won't be returned), but it doesn't prevent access to endpoints that don't use the DB or that query external sources (like Jules API).
+**Prevention:** Always explicitly authenticate requests at the endpoint level in `/api` routes (e.g., check `await currentUserId()`) rather than assuming middleware protects them.

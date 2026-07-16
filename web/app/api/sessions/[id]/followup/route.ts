@@ -1,11 +1,16 @@
 import { NextResponse } from "next/server";
 import { buildAdapter } from "@/lib/core";
-import { getSession } from "@/lib/sessions-store";
+import { currentUserId, getSession } from "@/lib/sessions-store";
 
 export const dynamic = "force-dynamic";
 
 // POST /api/sessions/:id/followup — { message }
 export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
+  const userId = await currentUserId();
+  if (!userId) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
   const { id } = await ctx.params;
   const { message } = (await req.json().catch(() => ({}))) as { message?: string };
   if (!message?.trim()) {
