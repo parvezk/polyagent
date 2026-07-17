@@ -9,8 +9,10 @@ export async function GET() {
     const sources = (await realJulesPort(resolveKey("jules")).listSources?.()) ?? [];
     return NextResponse.json({ sources });
   } catch (err) {
+    // SECURITY: Log error internally but return generic message to client to prevent info leakage
+    console.error("Failed to fetch Jules sources:", err);
     return NextResponse.json(
-      { sources: [], error: err instanceof Error ? err.message : String(err) },
+      { sources: [], error: "Failed to fetch sources" },
       { status: 200 }, // soft-fail: modal falls back to manual entry
     );
   }
