@@ -19,15 +19,20 @@ export async function GET() {
       let status = s.status;
       let lastUpdate = s.last_polled ?? s.dispatched_at;
       let summary: string | undefined;
-      try {
-        const live = await buildAdapter(s.vendor).getStatus(s.id);
-        status = live.status;
-        lastUpdate = live.lastUpdate.toISOString();
-        summary = live.summary;
-        await patchSession(s.id, { status: live.status, last_polled: lastUpdate });
-      } catch {
-        // keep last-known status
+
+      // ⚡ Bolt: Skip unnecessary live polling for terminal states to reduce N+1 external API calls
+      if (status !== "completed" && status !== "failed") {
+        try {
+          const live = await buildAdapter(s.vendor).getStatus(s.id);
+          status = live.status;
+          lastUpdate = live.lastUpdate.toISOString();
+          summary = live.summary;
+          await patchSession(s.id, { status: live.status, last_polled: lastUpdate });
+        } catch {
+          // keep last-known status
+        }
       }
+
       return {
         id: s.id,
         vendor: s.vendor,
