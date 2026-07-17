@@ -27,10 +27,13 @@ Vendor-adapter pattern. Each vendor implements a common `AgentAdapter` (`dispatc
 
 ## Setup
 
+Node.js 20.19+, 22.13+, or 24+ is required for the web test environment.
+
 ```bash
 npm install
+npm --prefix web install
 cp .env.example .env.local   # then fill in your keys
-npm test                     # unit tests (no keys needed)
+npm test                     # core and web tests (no keys needed)
 ```
 
 Keys (`.env.local`, gitignored):

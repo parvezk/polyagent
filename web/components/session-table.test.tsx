@@ -94,9 +94,16 @@ describe("SessionTable row activation", () => {
   it("ignores keys that do not activate a row", () => {
     const onSelect = vi.fn();
     render(<SessionTable onSelect={onSelect} />);
+    const event = new KeyboardEvent("keydown", {
+      key: "ArrowDown",
+      bubbles: true,
+      cancelable: true,
+    });
 
-    fireEvent.keyDown(rowFor("Fix keyboard flow"), { key: "ArrowDown" });
+    const dispatched = rowFor("Fix keyboard flow").dispatchEvent(event);
 
+    expect(dispatched).toBe(true);
+    expect(event.defaultPrevented).toBe(false);
     expect(onSelect).not.toHaveBeenCalled();
   });
 });
