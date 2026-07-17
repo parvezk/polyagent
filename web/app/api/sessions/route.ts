@@ -1,11 +1,16 @@
 import { NextResponse } from "next/server";
 import { buildAdapter } from "@/lib/core";
-import { listSessions, patchSession } from "@/lib/sessions-store";
+import { currentUserId, listSessions, patchSession } from "@/lib/sessions-store";
 
 export const dynamic = "force-dynamic"; // always fresh; never cache live status
 
 // GET /api/sessions — list the user's sessions (RLS-scoped), polling each vendor live.
 export async function GET() {
+  const userId = await currentUserId();
+  if (!userId) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
   let sessions;
   try {
     sessions = await listSessions();
