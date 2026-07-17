@@ -37,11 +37,9 @@ export function SessionDrawer({
     setMessage("");
   }, [session?.id]);
 
-  const { data } = useSWR<DetailResponse>(
-    session ? `/api/sessions/${session.id}` : null,
-    fetcher,
-    { refreshInterval: 4000 },
-  );
+  const { data } = useSWR<DetailResponse>(session ? `/api/sessions/${session.id}` : null, fetcher, {
+    refreshInterval: 4000,
+  });
 
   async function sendFollowup() {
     if (!session) return;
@@ -88,9 +86,7 @@ export function SessionDrawer({
             </SheetHeader>
 
             <div className="flex-1 space-y-3 overflow-y-auto px-1 py-4">
-              {data?.firstMessage && (
-                <Message role="agent" content={data.firstMessage} />
-              )}
+              {data?.firstMessage && <Message role="agent" content={data.firstMessage} />}
               {messages.map((m, i) => (
                 <Message key={i} role={m.role} content={m.content} />
               ))}
@@ -108,7 +104,16 @@ export function SessionDrawer({
               <Textarea
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
-                placeholder="Send a follow-up to steer the agent…"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    if (!sending && message.trim()) {
+                      sendFollowup();
+                    }
+                  }
+                }}
+                placeholder="Send a follow-up to steer the agent… (Press Enter to send)"
+                aria-label="Follow-up message"
                 className="min-h-20 border-zinc-800 bg-zinc-900"
               />
               <Button
