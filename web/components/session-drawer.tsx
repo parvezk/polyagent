@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import useSWR, { mutate } from "swr";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -31,11 +31,15 @@ export function SessionDrawer({
   // Optimistically-shown follow-ups (server output may not echo them back).
   const [sent, setSent] = useState<string[]>([]);
 
+  const [prevSessionId, setPrevSessionId] = useState<string | undefined>(undefined);
+
   // Reset optimistic messages when switching sessions.
-  useEffect(() => {
+  // We do this during render rather than in a useEffect to prevent cascading re-renders.
+  if (session?.id !== prevSessionId) {
+    setPrevSessionId(session?.id);
     setSent([]);
     setMessage("");
-  }, [session?.id]);
+  }
 
   const { data } = useSWR<DetailResponse>(
     session ? `/api/sessions/${session.id}` : null,
