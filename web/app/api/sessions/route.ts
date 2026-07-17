@@ -19,15 +19,25 @@ export async function GET() {
       let status = s.status;
       let lastUpdate = s.last_polled ?? s.dispatched_at;
       let summary: string | undefined;
-      try {
-        const live = await buildAdapter(s.vendor).getStatus(s.id);
-        status = live.status;
-        lastUpdate = live.lastUpdate.toISOString();
-        summary = live.summary;
-        await patchSession(s.id, { status: live.status, last_polled: lastUpdate });
-      } catch {
-        // keep last-known status
+
+      // ⚡ BOLT OPTIMIZATION:
+      // 1. Skip vendor polling for terminal sessions (saves O(N) network requests)
+      // 2. Only patch DB when status actually changes (saves O(N) database writes)
+      if (status !== "completed" && status !== "failed") {
+        try {
+          const live = await buildAdapter(s.vendor).getStatus(s.id);
+          status = live.status;
+          lastUpdate = live.lastUpdate.toISOString();
+          summary = live.summary;
+
+          if (s.status !== live.status || !s.last_polled) {
+            await patchSession(s.id, { status: live.status, last_polled: lastUpdate });
+          }
+        } catch {
+          // keep last-known status
+        }
       }
+
       return {
         id: s.id,
         vendor: s.vendor,
