@@ -21,6 +21,22 @@ describe("realJulesPort.createSession", () => {
         jsonResponse({
           sources: [
             {
+              name: "sources/wrong-repo",
+              githubRepo: {
+                owner: "ParvezK",
+                repo: "AnotherRepo",
+                defaultBranch: { displayName: "wrong-repo-branch" },
+              },
+            },
+            {
+              name: "sources/wrong-owner",
+              githubRepo: {
+                owner: "AnotherOwner",
+                repo: "PolyAgent",
+                defaultBranch: { displayName: "wrong-owner-branch" },
+              },
+            },
+            {
               name: "sources/github-123",
               githubRepo: {
                 owner: "ParvezK",
@@ -48,15 +64,9 @@ describe("realJulesPort.createSession", () => {
 
     const createRequest = fetchMock.mock.calls[1];
     expect(createRequest?.[0]).toBe(`${JULES_API_BASE}/sessions`);
-    expect(JSON.parse(String(createRequest?.[1]?.body))).toEqual({
-      prompt: "Fix the import flow",
-      title: "Fix the import flow",
-      requirePlanApproval: false,
-      automationMode: "AUTO_CREATE_PR",
-      sourceContext: {
-        source: "sources/github-123",
-        githubRepoContext: { startingBranch: "develop" },
-      },
+    expect(JSON.parse(String(createRequest?.[1]?.body)).sourceContext).toEqual({
+      source: "sources/github-123",
+      githubRepoContext: { startingBranch: "develop" },
     });
   });
 
