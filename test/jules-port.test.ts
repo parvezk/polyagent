@@ -31,9 +31,7 @@ describe("realJulesPort.createSession", () => {
           ],
         }),
       )
-      .mockResolvedValueOnce(
-        jsonResponse({ name: "sessions/session-123", state: "IN_PROGRESS" }),
-      );
+      .mockResolvedValueOnce(jsonResponse({ name: "sessions/session-123", state: "IN_PROGRESS" }));
     vi.stubGlobal("fetch", fetchMock);
 
     const result = await realJulesPort("test-api-key").createSession({
