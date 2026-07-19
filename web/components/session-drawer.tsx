@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import useSWR, { mutate } from "swr";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -30,18 +30,18 @@ export function SessionDrawer({
   const [sending, setSending] = useState(false);
   // Optimistically-shown follow-ups (server output may not echo them back).
   const [sent, setSent] = useState<string[]>([]);
+  const [prevSessionId, setPrevSessionId] = useState<string | undefined>(undefined);
 
   // Reset optimistic messages when switching sessions.
-  useEffect(() => {
+  if (session?.id !== prevSessionId) {
+    setPrevSessionId(session?.id);
     setSent([]);
     setMessage("");
-  }, [session?.id]);
+  }
 
-  const { data } = useSWR<DetailResponse>(
-    session ? `/api/sessions/${session.id}` : null,
-    fetcher,
-    { refreshInterval: 4000 },
-  );
+  const { data } = useSWR<DetailResponse>(session ? `/api/sessions/${session.id}` : null, fetcher, {
+    refreshInterval: 4000,
+  });
 
   async function sendFollowup() {
     if (!session) return;
@@ -88,9 +88,7 @@ export function SessionDrawer({
             </SheetHeader>
 
             <div className="flex-1 space-y-3 overflow-y-auto px-1 py-4">
-              {data?.firstMessage && (
-                <Message role="agent" content={data.firstMessage} />
-              )}
+              {data?.firstMessage && <Message role="agent" content={data.firstMessage} />}
               {messages.map((m, i) => (
                 <Message key={i} role={m.role} content={m.content} />
               ))}
