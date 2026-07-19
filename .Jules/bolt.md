@@ -1,0 +1,3 @@
+## 2024-07-19 - Skip external polling for terminal sessions
+**Learning:** In a polling-based architecture where session status is frequently fetched (e.g., every 3 seconds for a dashboard), checking terminal states before making external API calls and subsequent database writes is critical. Without this, backend load and external API consumption scale linearly with the total number of sessions rather than the number of *active* sessions.
+**Action:** Always check if a background job or session is in a terminal state (like "completed" or "failed") before attempting to sync its latest status from an external source or update the database.
