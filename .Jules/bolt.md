@@ -1,0 +1,3 @@
+## 2025-07-20 - Skip Unnecessary Polling for Terminal States
+**Learning:** The application was polling third-party agent APIs (Claude, Jules) for session statuses every few seconds, even for sessions that had already reached a terminal state (`completed` or `failed`). This resulted in redundant network requests, unnecessary compute overhead, and increased risk of hitting API rate limits, especially as the number of past sessions grows.
+**Action:** Always check if a resource is in a terminal state before attempting to poll its live status. Bypassing external API calls for immutable states is an easy performance win that scales effectively.
