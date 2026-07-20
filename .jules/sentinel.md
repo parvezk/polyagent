@@ -1,0 +1,4 @@
+## 2024-05-18 - Missing Authentication on API Route
+**Vulnerability:** The `/api/jules/sources` endpoint lacked an authentication check, potentially exposing internal data or allowing unauthorized third-party API calls using server-side keys.
+**Learning:** Next.js middleware in this project excludes `/api` paths from global authentication, meaning individual `/api` endpoints must explicitly perform their own authentication checks (e.g., via `currentUserId()`). Endpoints without RLS (like those calling external APIs) are completely unprotected if this is missed.
+**Prevention:** Always verify that every `/api` route explicitly calls `currentUserId()` or equivalent if it accesses sensitive data or calls external services. Add custom linting rules or standard middleware enforcement if possible.
