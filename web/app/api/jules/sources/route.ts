@@ -1,10 +1,18 @@
 import { NextResponse } from "next/server";
 import { realJulesPort, resolveKey } from "@/lib/core";
+import { currentUserId } from "@/lib/sessions-store";
 
 export const dynamic = "force-dynamic";
 
 // GET /api/jules/sources — repos connected to Jules, for the dispatch picker.
 export async function GET() {
+  // SECURITY: Require authentication since middleware excludes /api endpoints
+  // and we're using a server-side API key (resolveKey) without RLS protection.
+  const userId = await currentUserId();
+  if (!userId) {
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  }
+
   try {
     const sources = (await realJulesPort(resolveKey("jules")).listSources?.()) ?? [];
     return NextResponse.json({ sources });
