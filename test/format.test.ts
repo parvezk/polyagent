@@ -49,4 +49,19 @@ describe("renderTable", () => {
     const widths = new Set(lines.map((l) => l.length));
     expect(widths.size).toBe(1);
   });
+
+  it("handles large row counts without overflowing the call stack", () => {
+    const rows = Array.from({ length: 150_000 }, (_, index) => ({
+      vendor: "jules",
+      id: index === 149_999 ? "x".repeat(30) : "x",
+      label: "label",
+      status: "running",
+      lastUpdate: "now",
+    }));
+
+    const lines = renderTable(rows).split("\n");
+
+    expect(lines).toHaveLength(150_001);
+    expect(new Set(lines.map((line) => line.length)).size).toBe(1);
+  });
 });
