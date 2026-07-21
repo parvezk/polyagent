@@ -1,0 +1,4 @@
+## 2026-07-21 - Unauthenticated External API Calls via Next.js API Routes
+**Vulnerability:** Next.js `/api` endpoints excluded from global middleware auth were directly using server-side API keys (`resolveKey`) without performing explicit internal authentication checks (e.g. `currentUserId()`), exposing these endpoints to unauthenticated requests.
+**Learning:** Endpoints making external/third-party API calls using server-side keys do not benefit from Supabase Row Level Security (RLS) like database queries do. Relying on RLS for general security is insufficient when external services are involved.
+**Prevention:** Always manually authenticate users via `currentUserId()` in Next.js `/api` endpoints, especially those that proxy requests to external APIs using sensitive server-side credentials.
