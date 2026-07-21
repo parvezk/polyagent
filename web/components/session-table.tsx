@@ -9,7 +9,13 @@ const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 export function SessionTable({ onSelect }: { onSelect: (s: SessionView) => void }) {
   const { data, isLoading } = useSWR<{ sessions: SessionView[] }>("/api/sessions", fetcher, {
-    refreshInterval: 3000,
+    refreshInterval: (currentData) => {
+      if (!currentData?.sessions) return 3000;
+      const allTerminal = currentData.sessions.every(
+        (s) => s.status === "completed" || s.status === "failed",
+      );
+      return allTerminal ? 0 : 3000;
+    },
   });
 
   const sessions = data?.sessions ?? [];
@@ -55,9 +61,7 @@ export function SessionTable({ onSelect }: { onSelect: (s: SessionView) => void 
                 }}
                 tabIndex={0}
                 className={`cursor-pointer border-b border-zinc-900 transition-colors hover:bg-zinc-900/60 focus-visible:bg-zinc-900/60 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-zinc-400 ${
-                  needsYou
-                    ? "bg-amber-400/[0.07] shadow-[inset_3px_0_0_0_rgb(251,191,36)]"
-                    : ""
+                  needsYou ? "bg-amber-400/[0.07] shadow-[inset_3px_0_0_0_rgb(251,191,36)]" : ""
                 }`}
               >
                 <td className="px-4 py-2.5 font-mono text-xs text-zinc-600">{i + 1}</td>
