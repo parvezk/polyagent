@@ -95,15 +95,17 @@ export function NewAgentModal() {
           {/* Vendor — icon radio tiles */}
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-zinc-400">Vendor</label>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-4 gap-2" role="radiogroup" aria-label="Vendor">
               {VENDORS.map((v) => {
                 const selected = v === vendor;
                 return (
                   <button
                     key={v}
                     type="button"
+                    role="radio"
+                    aria-checked={selected}
                     onClick={() => setVendor(v)}
-                    className={`flex flex-col items-center gap-1.5 rounded-lg border px-2 py-3 transition-all ${
+                    className={`flex flex-col items-center gap-1.5 rounded-lg border px-2 py-3 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900 ${
                       selected
                         ? "border-[#D97757] bg-[#D97757]/10 ring-1 ring-[#D97757]/40"
                         : "border-zinc-700/60 bg-zinc-950/40 hover:border-zinc-600"
