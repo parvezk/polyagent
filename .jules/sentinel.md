@@ -1,0 +1,4 @@
+## 2024-07-22 - Missing Authentication on Third-Party API Proxy Endpoints
+**Vulnerability:** The `/api/jules/sources` endpoint fetched data from the Jules API using a server-side API key without verifying if the caller was authenticated.
+**Learning:** Next.js middleware in this project excludes `/api` paths from global authentication. This means individual `/api` endpoints must explicitly perform their own authentication checks (e.g., via `currentUserId()`), which is especially critical for endpoints making external API calls using server-side keys since they do not benefit from Supabase Row Level Security (RLS).
+**Prevention:** Always explicitly check for authentication (e.g., `const userId = await currentUserId()`) at the top of any route handler in `/app/api/**` before interacting with external APIs, databases without RLS, or exposing sensitive information.
