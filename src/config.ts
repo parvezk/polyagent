@@ -7,8 +7,13 @@ import type { Vendor } from "./types.js";
 // Side-effect on import so any entrypoint (CLI or smoke script) gets keys.
 loadEnv({ path: [".env.local", ".env"] });
 
-/** Where dispatched sessions are persisted. */
-export const STATE_PATH = join(homedir(), ".polyagent", "state.json");
+/**
+ * Where dispatched sessions are persisted. Defaults to ~/.polyagent/state.json,
+ * but POLYAGENT_STATE_PATH overrides it so the smoke/E2E layer can point at an
+ * isolated temp file instead of mutating the real user state.
+ */
+export const STATE_PATH =
+  process.env.POLYAGENT_STATE_PATH ?? join(homedir(), ".polyagent", "state.json");
 
 const ENV_VARS: Record<Vendor, string> = {
   claude: "ANTHROPIC_API_KEY",
