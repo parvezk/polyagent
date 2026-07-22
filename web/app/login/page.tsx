@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { hasSupabaseConfig } from "@/lib/supabase/config";
 import { Button } from "@/components/ui/button";
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
+  const authConfigured = hasSupabaseConfig();
 
   async function signIn() {
     setLoading(true);
@@ -29,11 +31,16 @@ export default function LoginPage() {
       </div>
       <Button
         onClick={signIn}
-        disabled={loading}
+        disabled={loading || !authConfigured}
         className="bg-[#D97757] text-zinc-950 hover:bg-[#c8694a]"
       >
         {loading ? "Redirecting…" : "Sign in with GitHub"}
       </Button>
+      {!authConfigured && (
+        <p className="max-w-sm text-xs text-amber-300">
+          Authentication is not configured. Add the Supabase environment variables to sign in.
+        </p>
+      )}
     </div>
   );
 }
