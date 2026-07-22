@@ -14,16 +14,23 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
 
   const adapter = buildAdapter(session.vendor);
   let status = session.status;
-  let summary: string | undefined;
+  let summary: string | undefined = session.summary ?? undefined;
   let messages: { role: string; content: string; timestamp: string }[] = [];
 
-  try {
-    const live = await adapter.getStatus(id);
-    status = live.status;
-    summary = live.summary;
-    await patchSession(id, { status: live.status, last_polled: live.lastUpdate.toISOString() });
-  } catch {
-    /* keep last-known */
+  // Bolt optimization: Skip external polling for completed/failed sessions to avoid unnecessary network/DB calls.
+  if (status !== "completed" && status !== "failed") {
+    try {
+      const live = await adapter.getStatus(id);
+      status = live.status;
+      summary = live.summary;
+      await patchSession(id, {
+        status: live.status,
+        last_polled: live.lastUpdate.toISOString(),
+        summary: live.summary ?? null,
+      });
+    } catch {
+      /* keep last-known */
+    }
   }
 
   try {
