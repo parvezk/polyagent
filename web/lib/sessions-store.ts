@@ -14,6 +14,7 @@ export interface DbSession {
   first_message: string | null;
   dispatched_at: string;
   last_polled: string | null;
+  summary: string | null;
 }
 
 // Map a core AgentSession (from dispatch) to a DB row for the current user.
@@ -28,6 +29,7 @@ export function toDbRow(s: AgentSession, userId: string): Omit<DbSession, never>
     first_message: s.firstMessage ?? null,
     dispatched_at: s.dispatchedAt,
     last_polled: s.lastPolled ?? null,
+    summary: null,
   };
 }
 
@@ -69,7 +71,7 @@ export async function upsertSessions(rows: DbSession[]): Promise<void> {
 
 export async function patchSession(
   id: string,
-  patch: Partial<Pick<DbSession, "status" | "last_polled">>,
+  patch: Partial<Pick<DbSession, "status" | "last_polled" | "summary">>,
 ): Promise<void> {
   const supabase = await createClient();
   await supabase.from("sessions").update(patch).eq("id", id);

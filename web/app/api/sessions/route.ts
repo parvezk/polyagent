@@ -18,16 +18,25 @@ export async function GET() {
     sessions.map(async (s) => {
       let status = s.status;
       let lastUpdate = s.last_polled ?? s.dispatched_at;
-      let summary: string | undefined;
-      try {
-        const live = await buildAdapter(s.vendor).getStatus(s.id);
-        status = live.status;
-        lastUpdate = live.lastUpdate.toISOString();
-        summary = live.summary;
-        await patchSession(s.id, { status: live.status, last_polled: lastUpdate });
-      } catch {
-        // keep last-known status
+      let summary: string | undefined = s.summary ?? undefined;
+
+      // Bolt optimization: Skip external polling for completed/failed sessions to avoid unnecessary network/DB calls.
+      if (status !== "completed" && status !== "failed") {
+        try {
+          const live = await buildAdapter(s.vendor).getStatus(s.id);
+          status = live.status;
+          lastUpdate = live.lastUpdate.toISOString();
+          summary = live.summary;
+          await patchSession(s.id, {
+            status: live.status,
+            last_polled: lastUpdate,
+            summary: live.summary ?? null,
+          });
+        } catch {
+          // keep last-known status
+        }
       }
+
       return {
         id: s.id,
         vendor: s.vendor,
