@@ -30,8 +30,18 @@ Vendor-adapter pattern. Each vendor implements a common `AgentAdapter` (`dispatc
 ```bash
 npm install
 cp .env.example .env.local   # then fill in your keys
-npm test                     # unit tests (no keys needed)
+npm test                     # unit + E2E smoke tests (no keys needed)
 ```
+
+`npm test` also runs a deterministic **E2E smoke layer** (`test/cli.e2e.test.ts`,
+or `npm run test:e2e` on its own) that spawns the real CLI entrypoint end-to-end
+without vendor keys or network calls. It isolates state via `POLYAGENT_STATE_PATH`
+(a temp file, so your real `~/.polyagent/state.json` is never touched) and swaps
+in fake adapters via `POLYAGENT_FAKE_ADAPTERS=1`. CI runs the whole suite on every
+push and PR — see `.github/workflows/ci.yml`.
+
+The live scripts under `scripts/` (`smoke-claude.ts`, `smoke-jules.ts`) still
+dispatch real vendor sessions and require the corresponding API keys.
 
 Keys (`.env.local`, gitignored):
 
