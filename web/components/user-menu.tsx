@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 
 export function UserMenu() {
   const [email, setEmail] = useState<string | null>(null);
 
   useEffect(() => {
+    // No Supabase configured (e.g. local dev with the auth bypass) → no user to show.
+    if (!isSupabaseConfigured()) return;
     const supabase = createClient();
     supabase.auth.getClaims().then(({ data }) => {
       const claims = data?.claims as { email?: string } | undefined;

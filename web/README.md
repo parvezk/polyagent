@@ -1,36 +1,53 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## PolyAgent web
 
-## Getting Started
+The Next.js dashboard for PolyAgent — dispatch and track cloud coding agents across vendors
+(Claude, Jules, Cursor, Gemini) from one interface.
 
-First, run the development server:
+### Getting started
 
 ```bash
+npm install
+cp .env.example .env.local   # fill in the values you need (see below)
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Environment variables
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Copy `.env.example` to `.env.local` (gitignored). Production values live in Vercel.
 
-## Learn More
+| Variable | Purpose |
+| --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL — required for auth. |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase publishable (anon) key — required for auth. |
+| `NEXT_PUBLIC_POSTHOG_KEY` / `NEXT_PUBLIC_POSTHOG_HOST` | PostHog analytics (only tracks on the production hosts). |
+| `AUTH_DEV_BYPASS` | Local-dev only escape hatch — see below. |
 
-To learn more about Next.js, take a look at the following resources:
+### Auth gating (fails closed)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+`middleware.ts` runs `updateSession` on every non-API, non-asset route. Behavior:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **Supabase configured:** the request is authenticated with `getClaims()`. Unauthenticated
+  users are redirected to `/login` (auth routes are exempt to avoid a redirect loop).
+- **Supabase _not_ configured:** the middleware **fails closed** — every non-auth route is
+  redirected to `/login`, so a production deploy with missing env vars locks the dashboard
+  down instead of quietly exposing it.
+- **Local-dev bypass:** set `AUTH_DEV_BYPASS=true` in `.env.local` to skip the gate while
+  building UI without a Supabase project. This is opt-in and only honored when
+  `NODE_ENV !== "production"`, so it can never re-open the gate in a real deploy.
 
-## Deploy on Vercel
+### End-to-end tests (Playwright)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npm install
+npx playwright install chromium   # one-time browser download
+npm run test:e2e                  # or: npm run test:e2e:ui
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+`playwright.config.ts` boots `next dev` on port 3100 with `AUTH_DEV_BYPASS=true`, so the
+tests run without any Supabase, OAuth, or vendor credentials. Every `/api/*` route is mocked
+from the specs in `e2e/` (see `e2e/helpers.ts`) — nothing touches real Supabase or the
+Claude/Jules/Cursor/Gemini vendor APIs. The first-phase suite covers the core dashboard flows:
+shell + empty state, mocked sessions rendering, row-click opening the drawer, the new-agent
+modal, and the import success/error toasts.
