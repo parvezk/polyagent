@@ -1,13 +1,40 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+function isAuthRoute(request: NextRequest) {
+  return (
+    request.nextUrl.pathname.startsWith("/login") ||
+    request.nextUrl.pathname.startsWith("/auth")
+  );
+}
+
+// Send everything except the auth routes themselves to /login (avoids a redirect loop).
+function redirectToLogin(request: NextRequest, response: NextResponse) {
+  if (isAuthRoute(request)) return response;
+  const url = request.nextUrl.clone();
+  url.pathname = "/login";
+  return NextResponse.redirect(url);
+}
+
 // Refreshes the auth session on every request and gates app routes.
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
 
-  // Until Supabase is configured, pass through so the app still runs (no auth gate yet).
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY) {
-    return response;
+  const hasSupabaseConfig =
+    !!process.env.NEXT_PUBLIC_SUPABASE_URL &&
+    !!process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+
+  if (!hasSupabaseConfig) {
+    // Explicit, opt-in bypass for local development ONLY. This must never fail open in
+    // production: a prod deploy with missing Supabase env vars has to lock the dashboard
+    // down, not silently expose it. Set AUTH_DEV_BYPASS=true in .env.local to skip the gate
+    // while building UI without a Supabase project.
+    const devBypass =
+      process.env.NODE_ENV !== "production" && process.env.AUTH_DEV_BYPASS === "true";
+    if (devBypass) return response;
+
+    // Fail closed: no auth backend configured → nobody gets in.
+    return redirectToLogin(request, response);
   }
 
   const supabase = createServerClient(
@@ -33,14 +60,9 @@ export async function updateSession(request: NextRequest) {
   const { data } = await supabase.auth.getClaims();
   const user = data?.claims;
 
-  const isAuthRoute = request.nextUrl.pathname.startsWith("/login") ||
-    request.nextUrl.pathname.startsWith("/auth");
-
   // Unauthenticated → bounce to /login (except auth routes themselves).
-  if (!user && !isAuthRoute) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    return NextResponse.redirect(url);
+  if (!user) {
+    return redirectToLogin(request, response);
   }
 
   return response;
