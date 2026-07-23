@@ -7,6 +7,9 @@ const dependencies = vi.hoisted(() => ({
   identify: vi.fn(),
   pathname: "/sessions",
   query: "",
+  searchParams: {
+    toString: vi.fn(),
+  },
   shouldTrackAnalytics: vi.fn(),
   useEffect: vi.fn(),
 }));
@@ -17,9 +20,7 @@ vi.mock("react", () => ({
 
 vi.mock("next/navigation", () => ({
   usePathname: () => dependencies.pathname,
-  useSearchParams: () => ({
-    toString: () => dependencies.query,
-  }),
+  useSearchParams: () => dependencies.searchParams,
 }));
 
 vi.mock("posthog-js", () => ({
@@ -45,6 +46,7 @@ describe("PostHog analytics components", () => {
     vi.clearAllMocks();
     dependencies.pathname = "/sessions";
     dependencies.query = "";
+    dependencies.searchParams.toString.mockImplementation(() => dependencies.query);
     dependencies.shouldTrackAnalytics.mockReturnValue(true);
     dependencies.useEffect.mockImplementation((effect: () => void) => effect());
     dependencies.createClient.mockReturnValue({
@@ -76,6 +78,40 @@ describe("PostHog analytics components", () => {
       PostHogPageView();
 
       expect(dependencies.capture).not.toHaveBeenCalled();
+    });
+
+    it("captures a new pageview when the pathname changes", () => {
+      let initialized = false;
+      let previousDependencies: readonly unknown[] | undefined;
+      dependencies.useEffect.mockImplementation(
+        (effect: () => void, effectDependencies?: readonly unknown[]) => {
+          const previous = previousDependencies;
+          const dependenciesChanged =
+            !initialized ||
+            effectDependencies === undefined ||
+            previous === undefined ||
+            effectDependencies.length !== previous.length ||
+            effectDependencies.some(
+              (dependency, index) => !Object.is(dependency, previous[index]),
+            );
+
+          initialized = true;
+          previousDependencies = effectDependencies;
+          if (dependenciesChanged) effect();
+        },
+      );
+
+      PostHogPageView();
+      dependencies.pathname = "/settings";
+      PostHogPageView();
+
+      expect(dependencies.capture).toHaveBeenCalledTimes(2);
+      expect(dependencies.capture).toHaveBeenNthCalledWith(1, "$pageview", {
+        $current_url: "/sessions",
+      });
+      expect(dependencies.capture).toHaveBeenNthCalledWith(2, "$pageview", {
+        $current_url: "/settings",
+      });
     });
   });
 
