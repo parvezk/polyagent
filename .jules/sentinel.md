@@ -1,0 +1,4 @@
+## 2026-07-23 - Missing Authentication on Unprotected API Route
+**Vulnerability:** The `/api/jules/sources` endpoint lacked an explicit authentication check and relied on `supabase.auth` or RLS implicitly.
+**Learning:** Next.js middleware in this project excludes `/api` paths from global authentication. While endpoints interacting only with Supabase data are somewhat protected by Row Level Security (RLS) if queries are properly scoped, endpoints making external/third-party API calls (like fetching Jules sources via `realJulesPort`) do not benefit from RLS and remain completely unauthenticated.
+**Prevention:** Individual `/api` endpoints must explicitly perform their own authentication checks (e.g., via `currentUserId()`), especially those that perform operations using server-side credentials and do not solely rely on RLS-protected database queries.
