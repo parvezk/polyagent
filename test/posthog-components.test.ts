@@ -91,9 +91,7 @@ describe("PostHog analytics components", () => {
             effectDependencies === undefined ||
             previous === undefined ||
             effectDependencies.length !== previous.length ||
-            effectDependencies.some(
-              (dependency, index) => !Object.is(dependency, previous[index]),
-            );
+            effectDependencies.some((dependency, index) => !Object.is(dependency, previous[index]));
 
           initialized = true;
           previousDependencies = effectDependencies;
