@@ -1,0 +1,4 @@
+## 2024-07-24 - [Missing Auth on Next.js /api Endpoints]
+**Vulnerability:** The `/api/jules/sources` endpoint was missing authentication checks and was publicly accessible, allowing unauthorized users to trigger external API calls with server-side keys.
+**Learning:** Next.js middleware in this project explicitly excludes `/api` paths from global authentication. Consequently, individual `/api` endpoints must explicitly implement their own authentication logic (e.g., via `currentUserId()`), and are not implicitly protected by Supabase Row Level Security (RLS). This is a critical pattern that could easily be missed if developers assume global middleware covers all endpoints.
+**Prevention:** Always verify that every endpoint in the `/api` directory explicitly checks for authentication before performing any sensitive actions or making external API calls using server-side keys. Pay special attention to endpoints that bypass RLS.
