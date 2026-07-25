@@ -1,0 +1,4 @@
+## 2026-07-25 - Missing Authentication on External API Calling Endpoint
+**Vulnerability:** The `/api/jules/sources` endpoint lacked authentication checks, allowing unauthenticated users to trigger external API calls (`realJulesPort(...).listSources()`) using the server's API key.
+**Learning:** Next.js middleware in this project intentionally excludes `/api` paths from global authentication. Consequently, individual `/api` endpoints must explicitly perform their own authentication checks (e.g., via `currentUserId()`), which is especially critical for endpoints making external/third-party API calls using server-side keys since they do not benefit from Supabase Row Level Security (RLS).
+**Prevention:** Always verify that every new route under `/api` explicitly checks authentication via `currentUserId()` or similar, particularly when interacting with external services or performing actions that bypass RLS.
