@@ -124,12 +124,12 @@ export function NewAgentModal() {
 
           {/* Repo (+ branch) */}
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-zinc-400">
+            <label htmlFor="repo-input" className="text-xs font-medium text-zinc-400">
               Repo {repoRequired(vendor) ? "" : <span className="text-zinc-600">(optional)</span>}
             </label>
             {vendor === "jules" ? (
               <Select value={repo} onValueChange={(v) => v && setRepo(v)}>
-                <SelectTrigger className="border-zinc-700 bg-zinc-950/50">
+                <SelectTrigger id="repo-input" className="border-zinc-700 bg-zinc-950/50">
                   <SelectValue placeholder="Select a connected repo" />
                 </SelectTrigger>
                 <SelectContent className="border-zinc-700 bg-zinc-900 text-zinc-100">
@@ -143,12 +143,15 @@ export function NewAgentModal() {
             ) : (
               <div className="grid grid-cols-3 gap-2">
                 <Input
+                  id="repo-input"
+                  aria-label="Repository owner and name"
                   value={repo}
                   onChange={(e) => setRepo(e.target.value)}
                   placeholder="owner/repo"
                   className="col-span-2 border-zinc-700 bg-zinc-950/50"
                 />
                 <Input
+                  aria-label="Branch name (optional)"
                   value={branch}
                   onChange={(e) => setBranch(e.target.value)}
                   placeholder="branch (optional)"
@@ -160,9 +163,11 @@ export function NewAgentModal() {
 
           {vendor === "claude" && (
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-zinc-400">Model</label>
+              <label htmlFor="model-select" className="text-xs font-medium text-zinc-400">
+                Model
+              </label>
               <Select value={model} onValueChange={(v) => v && setModel(v)}>
-                <SelectTrigger className="border-zinc-700 bg-zinc-950/50">
+                <SelectTrigger id="model-select" className="border-zinc-700 bg-zinc-950/50">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="border-zinc-700 bg-zinc-900 text-zinc-100">
@@ -177,8 +182,11 @@ export function NewAgentModal() {
           )}
 
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-zinc-400">Task</label>
+            <label htmlFor="task-textarea" className="text-xs font-medium text-zinc-400">
+              Task
+            </label>
             <Textarea
+              id="task-textarea"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               placeholder="e.g. Identify any security/XSS flaws in the repo"
