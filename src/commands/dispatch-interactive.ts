@@ -5,6 +5,7 @@ import { StateStore } from "../state.js";
 import { resolveKey, STATE_PATH } from "../config.js";
 import { realJulesPort } from "../adapters/jules-port.js";
 import { DEFAULT_CLAUDE_MODEL } from "../constants/claude.js";
+import { reviewTask, type ReviewContext, type TaskReview } from "./task-review.js";
 import type { Vendor } from "../types.js";
 
 const CLAUDE_MODELS = [
@@ -15,6 +16,80 @@ const CLAUDE_MODELS = [
 function bail(): never {
   p.cancel("Dispatch cancelled.");
   process.exit(0);
+}
+
+/**
+ * LLM-assisted pass between task entry and dispatch: surfaces clarifying
+ * questions and flags shaky instructions, then lets the user refine the prompt
+ * and re-review, or dispatch as-is. Returns the (possibly revised) task.
+ *
+ * This never blocks a dispatch on its own — if there's no Anthropic key or the
+ * review call fails, it degrades to the original task with a warning.
+ */
+async function clarifyTask(task: string, ctx: ReviewContext): Promise<string> {
+  let apiKey: string;
+  try {
+    apiKey = resolveKey("claude");
+  } catch {
+    p.log.warn("Skipping task review — set ANTHROPIC_API_KEY to enable it.");
+    return task;
+  }
+
+  let current = task;
+  // Loop so the user can refine → re-review as many rounds as they want.
+  for (;;) {
+    const s = p.spinner();
+    s.start("Reviewing the task");
+    let review: TaskReview;
+    try {
+      review = await reviewTask(current, ctx, apiKey);
+      s.stop("Task reviewed");
+    } catch {
+      s.stop(pc.yellow("Couldn't review the task — continuing"));
+      return current;
+    }
+
+    const flagged = review.questions.length > 0 || review.concerns.length > 0;
+    if (!flagged) {
+      p.log.success(review.summary || "Task looks clear.");
+      return current;
+    }
+
+    const lines: string[] = [];
+    if (review.summary) lines.push(review.summary, "");
+    if (review.concerns.length) {
+      lines.push(pc.yellow("Concerns"));
+      for (const c of review.concerns) lines.push(`  ${pc.yellow("•")} ${c}`);
+    }
+    if (review.questions.length) {
+      if (review.concerns.length) lines.push("");
+      lines.push(pc.cyan("Clarifying questions"));
+      for (const q of review.questions) lines.push(`  ${pc.cyan("•")} ${q}`);
+    }
+    p.note(
+      lines.join("\n"),
+      review.verdict === "flawed" ? "Push back before dispatch" : "Worth clarifying",
+    );
+
+    const choice = await p.select({
+      message: "How do you want to proceed?",
+      options: [
+        { value: "refine", label: "Refine the task", hint: "edit it with these in mind" },
+        { value: "proceed", label: "Dispatch as-is", hint: "ignore and continue" },
+        { value: "cancel", label: "Cancel" },
+      ],
+    });
+    if (p.isCancel(choice) || choice === "cancel") bail();
+    if (choice === "proceed") return current;
+
+    const revised = await p.text({
+      message: "Revise the task",
+      initialValue: current,
+      validate: (v) => (!v || v.trim().length === 0 ? "Task can't be empty" : undefined),
+    });
+    if (p.isCancel(revised)) bail();
+    current = (revised as string).trim();
+  }
 }
 
 /** Interactive dispatch wizard — launched when `dispatch` is run without a prompt. */
@@ -75,11 +150,14 @@ export async function dispatchWizard(): Promise<void> {
   });
   if (p.isCancel(prompt)) bail();
 
+  // Vet the task (clarifying questions + pushback) before the confirm step.
+  const task = await clarifyTask((prompt as string).trim(), { vendor, repo, model });
+
   const summary = [
     `${pc.dim("vendor")}  ${pc.bold(vendor)}`,
     repo ? `${pc.dim("repo")}    ${repo}` : "",
     model ? `${pc.dim("model")}   ${model}` : "",
-    `${pc.dim("task")}    ${prompt as string}`,
+    `${pc.dim("task")}    ${task}`,
   ]
     .filter(Boolean)
     .join("\n");
@@ -91,7 +169,7 @@ export async function dispatchWizard(): Promise<void> {
   const s = p.spinner();
   s.start("Dispatching");
   try {
-    const session = await buildAdapter(vendor).dispatch({ prompt: prompt as string, repo, model });
+    const session = await buildAdapter(vendor).dispatch({ prompt: task, repo, model });
     new StateStore(STATE_PATH).upsert(session);
     s.stop(pc.green("Dispatched"));
 
