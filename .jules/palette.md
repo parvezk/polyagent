@@ -1,0 +1,3 @@
+## 2024-11-20 - Form Accessibility for Custom Components and Placeholders
+**Learning:** Custom interactive components like `div` based radio buttons need `role="radiogroup"` on the container and `role="radio"` with `aria-checked` on the children. Additionally, placeholder-only inputs and Shadcn UI `Select` components require explicit `aria-label` or `aria-labelledby` attributes, as placeholders or external labels without `id`/`htmlFor` pairings do not provide sufficient context for screen readers.
+**Action:** When implementing custom interactive inputs or fields relying solely on placeholders, ensure that explicit ARIA roles, states, and labels are provided to maintain screen reader accessibility.
