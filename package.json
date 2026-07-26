@@ -31,7 +31,8 @@
     "@cursor/sdk": "^1.0.22",
     "commander": "^15.0.0",
     "dotenv": "^17.4.2",
-    "picocolors": "^1.1.1"
+    "picocolors": "^1.1.1",
+    "posthog-node": "^5.46.1"
   },
   "devDependencies": {
     "@types/node": "^26.0.0",
