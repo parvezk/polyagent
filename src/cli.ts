@@ -56,4 +56,9 @@ program
   .description("Send a follow-up message to a running session")
   .action((sessionId: string, message: string) => followupCommand(sessionId, message));
 
-program.parseAsync();
+program.parseAsync().catch((err) => {
+  // Fail securely: log the error message but hide the stack trace to prevent
+  // leaking internal paths, variables, or unhandled states to the terminal.
+  console.error(`\nError: ${err instanceof Error ? err.message : String(err)}`);
+  process.exitCode = 1;
+});
