@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import useSWR, { mutate } from "swr";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -30,18 +30,22 @@ export function SessionDrawer({
   const [sending, setSending] = useState(false);
   // Optimistically-shown follow-ups (server output may not echo them back).
   const [sent, setSent] = useState<string[]>([]);
+  const [prevSessionId, setPrevSessionId] = useState<string | undefined>(undefined);
 
-  // Reset optimistic messages when switching sessions.
-  useEffect(() => {
+  // Optimization: Update state during render rather than in a useEffect to prevent cascading re-renders.
+  // When the session changes, React will process these updates immediately, skipping an extra commit/paint phase.
+  // Impact: Eliminates one unnecessary re-render cycle per session switch.
+  if (session?.id !== prevSessionId) {
+    setPrevSessionId(session?.id);
     setSent([]);
     setMessage("");
-  }, [session?.id]);
+  }
 
-  const { data } = useSWR<DetailResponse>(
-    session ? `/api/sessions/${session.id}` : null,
-    fetcher,
-    { refreshInterval: 4000 },
-  );
+  // Optimization: Disable polling when the session is in a terminal state (completed or failed).
+  // Impact: Saves 1 network request and database read every 4 seconds for completed sessions.
+  const { data } = useSWR<DetailResponse>(session ? `/api/sessions/${session.id}` : null, fetcher, {
+    refreshInterval: session?.status === "completed" || session?.status === "failed" ? 0 : 4000,
+  });
 
   async function sendFollowup() {
     if (!session) return;
@@ -88,9 +92,7 @@ export function SessionDrawer({
             </SheetHeader>
 
             <div className="flex-1 space-y-3 overflow-y-auto px-1 py-4">
-              {data?.firstMessage && (
-                <Message role="agent" content={data.firstMessage} />
-              )}
+              {data?.firstMessage && <Message role="agent" content={data.firstMessage} />}
               {messages.map((m, i) => (
                 <Message key={i} role={m.role} content={m.content} />
               ))}
