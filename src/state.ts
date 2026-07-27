@@ -23,9 +23,11 @@ export class StateStore {
   }
 
   save(): void {
-    mkdirSync(dirname(this.path), { recursive: true });
+    // Security: Use strict file permissions (0o700 for dir, 0o600 for file) to prevent
+    // local information disclosure since this file contains sensitive session details.
+    mkdirSync(dirname(this.path), { recursive: true, mode: 0o700 });
     const data: StateFile = { sessions: this.sessions };
-    writeFileSync(this.path, JSON.stringify(data, null, 2));
+    writeFileSync(this.path, JSON.stringify(data, null, 2), { mode: 0o600 });
   }
 
   upsert(session: AgentSession): void {
