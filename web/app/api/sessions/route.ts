@@ -24,7 +24,11 @@ export async function GET() {
         status = live.status;
         lastUpdate = live.lastUpdate.toISOString();
         summary = live.summary;
-        await patchSession(s.id, { status: live.status, last_polled: lastUpdate });
+
+        // ⚡ Bolt: skip database writes if the session was already in a terminal state
+        if (s.status !== "completed" && s.status !== "failed") {
+          await patchSession(s.id, { status: live.status, last_polled: lastUpdate });
+        }
       } catch {
         // keep last-known status
       }
