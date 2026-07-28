@@ -94,16 +94,24 @@ export function NewAgentModal() {
         <div className="space-y-4 py-2">
           {/* Vendor — icon radio tiles */}
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-zinc-400">Vendor</label>
-            <div className="grid grid-cols-4 gap-2">
+            <label id="vendor-label" className="text-xs font-medium text-zinc-400">
+              Vendor
+            </label>
+            <div
+              className="grid grid-cols-4 gap-2"
+              role="radiogroup"
+              aria-labelledby="vendor-label"
+            >
               {VENDORS.map((v) => {
                 const selected = v === vendor;
                 return (
                   <button
                     key={v}
                     type="button"
+                    role="radio"
+                    aria-checked={selected}
                     onClick={() => setVendor(v)}
-                    className={`flex flex-col items-center gap-1.5 rounded-lg border px-2 py-3 transition-all ${
+                    className={`flex flex-col items-center gap-1.5 rounded-lg border px-2 py-3 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900 ${
                       selected
                         ? "border-[#D97757] bg-[#D97757]/10 ring-1 ring-[#D97757]/40"
                         : "border-zinc-700/60 bg-zinc-950/40 hover:border-zinc-600"
@@ -146,12 +154,14 @@ export function NewAgentModal() {
                   value={repo}
                   onChange={(e) => setRepo(e.target.value)}
                   placeholder="owner/repo"
+                  aria-label="Repository"
                   className="col-span-2 border-zinc-700 bg-zinc-950/50"
                 />
                 <Input
                   value={branch}
                   onChange={(e) => setBranch(e.target.value)}
                   placeholder="branch (optional)"
+                  aria-label="Branch"
                   className="border-zinc-700 bg-zinc-950/50"
                 />
               </div>
@@ -177,8 +187,11 @@ export function NewAgentModal() {
           )}
 
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-zinc-400">Task</label>
+            <label htmlFor="task" id="task-label" className="text-xs font-medium text-zinc-400">
+              Task
+            </label>
             <Textarea
+              id="task"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               placeholder="e.g. Identify any security/XSS flaws in the repo"
