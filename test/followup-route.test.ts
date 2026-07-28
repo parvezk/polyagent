@@ -91,6 +91,7 @@ describe("POST /api/sessions/[id]/followup", () => {
     expect(fakes.getSession).toHaveBeenCalledWith("session-1");
     expect(fakes.buildAdapter).toHaveBeenCalledWith("gemini");
     expect(fakes.sendFollowup).toHaveBeenCalledWith("session-1", message);
+    expect(fakes.sendFollowup).toHaveBeenCalledTimes(1);
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ ok: true });
   });
