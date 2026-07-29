@@ -39,16 +39,13 @@ describe("realJulesPort listActivities", () => {
     const result = await realJulesPort("test-api-key").listActivities("session-123");
 
     expect(fetchMock).toHaveBeenCalledOnce();
-    expect(fetchMock).toHaveBeenCalledWith(
-      `${JULES_API_BASE}/sessions/session-123/activities`,
-      {
-        method: "GET",
-        headers: {
-          "X-Goog-Api-Key": "test-api-key",
-          "Content-Type": "application/json",
-        },
+    expect(fetchMock).toHaveBeenCalledWith(`${JULES_API_BASE}/sessions/session-123/activities`, {
+      method: "GET",
+      headers: {
+        "X-Goog-Api-Key": "test-api-key",
+        "Content-Type": "application/json",
       },
-    );
+    });
     expect(result).toEqual({
       messages: [
         {
