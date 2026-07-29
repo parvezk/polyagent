@@ -94,14 +94,22 @@ export function NewAgentModal() {
         <div className="space-y-4 py-2">
           {/* Vendor — icon radio tiles */}
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-zinc-400">Vendor</label>
-            <div className="grid grid-cols-4 gap-2">
+            <label id="vendor-label" className="text-xs font-medium text-zinc-400">
+              Vendor
+            </label>
+            <div
+              role="radiogroup"
+              aria-labelledby="vendor-label"
+              className="grid grid-cols-4 gap-2"
+            >
               {VENDORS.map((v) => {
                 const selected = v === vendor;
                 return (
                   <button
                     key={v}
                     type="button"
+                    role="radio"
+                    aria-checked={selected}
                     onClick={() => setVendor(v)}
                     className={`flex flex-col items-center gap-1.5 rounded-lg border px-2 py-3 transition-all ${
                       selected
@@ -143,12 +151,14 @@ export function NewAgentModal() {
             ) : (
               <div className="grid grid-cols-3 gap-2">
                 <Input
+                  aria-label="Repository"
                   value={repo}
                   onChange={(e) => setRepo(e.target.value)}
                   placeholder="owner/repo"
                   className="col-span-2 border-zinc-700 bg-zinc-950/50"
                 />
                 <Input
+                  aria-label="Branch"
                   value={branch}
                   onChange={(e) => setBranch(e.target.value)}
                   placeholder="branch (optional)"
@@ -177,8 +187,11 @@ export function NewAgentModal() {
           )}
 
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-zinc-400">Task</label>
+            <label htmlFor="task" className="text-xs font-medium text-zinc-400">
+              Task
+            </label>
             <Textarea
+              id="task"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               placeholder="e.g. Identify any security/XSS flaws in the repo"
