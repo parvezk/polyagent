@@ -19,9 +19,19 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
 
   try {
     const live = await adapter.getStatus(id);
-    status = live.status;
+    const newStatus = live.status;
+    const newLastUpdate = live.lastUpdate.toISOString();
     summary = live.summary;
-    await patchSession(id, { status: live.status, last_polled: live.lastUpdate.toISOString() });
+
+    // Skip redundant database writes for unchanged terminal sessions
+    const isTerminal = session.status === "completed" || session.status === "failed";
+    const isUnchangedTerminal = isTerminal && session.status === newStatus;
+
+    if (!isUnchangedTerminal) {
+      await patchSession(id, { status: newStatus, last_polled: newLastUpdate });
+    }
+
+    status = newStatus;
   } catch {
     /* keep last-known */
   }

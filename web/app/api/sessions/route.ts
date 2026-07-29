@@ -21,10 +21,20 @@ export async function GET() {
       let summary: string | undefined;
       try {
         const live = await buildAdapter(s.vendor).getStatus(s.id);
-        status = live.status;
-        lastUpdate = live.lastUpdate.toISOString();
+        const newStatus = live.status;
+        const newLastUpdate = live.lastUpdate.toISOString();
         summary = live.summary;
-        await patchSession(s.id, { status: live.status, last_polled: lastUpdate });
+
+        // Skip redundant database writes for unchanged terminal sessions
+        const isTerminal = s.status === "completed" || s.status === "failed";
+        const isUnchangedTerminal = isTerminal && s.status === newStatus;
+
+        if (!isUnchangedTerminal) {
+          await patchSession(s.id, { status: newStatus, last_polled: newLastUpdate });
+        }
+
+        status = newStatus;
+        lastUpdate = newLastUpdate;
       } catch {
         // keep last-known status
       }
