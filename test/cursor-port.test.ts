@@ -41,11 +41,11 @@ describe("realCursorPort.getLatestRunStatus", () => {
       summary: "Agent metadata is still initializing",
     });
 
-    await expect(
-      realCursorPort("cursor-api-key").getLatestRunStatus("agent-456"),
-    ).resolves.toEqual({
-      status: "running",
-      summary: "Agent metadata is still initializing",
-    });
+    await expect(realCursorPort("cursor-api-key").getLatestRunStatus("agent-456")).resolves.toEqual(
+      {
+        status: "running",
+        summary: "Agent metadata is still initializing",
+      },
+    );
   });
 });
