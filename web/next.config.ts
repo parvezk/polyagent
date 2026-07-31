@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withWorkflow } from "@workflow/next";
 
 const nextConfig: NextConfig = {
   turbopack: {
@@ -9,4 +10,4 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ["@cursor/sdk", "@anthropic-ai/sdk"],
 };
 
-export default nextConfig;
+export default withWorkflow(nextConfig);
