@@ -21,7 +21,12 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
     const live = await adapter.getStatus(id);
     status = live.status;
     summary = live.summary;
-    await patchSession(id, { status: live.status, last_polled: live.lastUpdate.toISOString() });
+    if (
+      live.status !== session.status ||
+      live.lastUpdate.toISOString() !== (session.last_polled ?? session.dispatched_at)
+    ) {
+      await patchSession(id, { status: live.status, last_polled: live.lastUpdate.toISOString() });
+    }
   } catch {
     /* keep last-known */
   }

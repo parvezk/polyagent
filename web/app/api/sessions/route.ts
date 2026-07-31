@@ -24,7 +24,9 @@ export async function GET() {
         status = live.status;
         lastUpdate = live.lastUpdate.toISOString();
         summary = live.summary;
-        await patchSession(s.id, { status: live.status, last_polled: lastUpdate });
+        if (live.status !== s.status || lastUpdate !== (s.last_polled ?? s.dispatched_at)) {
+          await patchSession(s.id, { status: live.status, last_polled: lastUpdate });
+        }
       } catch {
         // keep last-known status
       }
