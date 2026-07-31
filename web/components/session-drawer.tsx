@@ -13,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "./status-badge";
 import { TelemetryStrip } from "./telemetry-strip";
 import type { AgentOutput, SessionStatus } from "@/lib/core";
+import { toast } from "sonner";
 import {
   SendIcon,
   ExternalLinkIcon,
@@ -32,7 +33,7 @@ interface DrawerProps {
     outputUrl?: string;
   } | null;
   onClose: () => void;
-  onFollowupSent: () => void;
+  onFollowupSent?: () => void;
 }
 
 export function SessionDrawer({ session, onClose, onFollowupSent }: DrawerProps) {
@@ -44,7 +45,7 @@ export function SessionDrawer({ session, onClose, onFollowupSent }: DrawerProps)
   const prevSessionIdRef = useRef<string | undefined>(undefined);
 
   // We need to fetch the detailed interaction history (messages).
-  const { data, mutate } = useSWR<AgentOutput>(
+  const { data, mutate } = useSWR<AgentOutput & { session?: { status: SessionStatus }, summary?: string, firstMessage?: string }>(
     session ? `/api/sessions/${session.id}` : null,
     (url) => fetch(url).then((r) => r.json()),
     { refreshInterval: session?.status === "running" ? 3000 : 0 },
@@ -66,7 +67,7 @@ export function SessionDrawer({ session, onClose, onFollowupSent }: DrawerProps)
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [data?.messages, sent]);
+  }, [data?.messages, sent, data?.firstMessage]);
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -77,18 +78,33 @@ export function SessionDrawer({ session, onClose, onFollowupSent }: DrawerProps)
       setMessage("");
       setSent((prev) => [...prev, { role: "human", content: txt }]);
 
-      await fetch(`/api/sessions/${session.id}/followup`, {
-        method: "POST",
-        body: JSON.stringify({ message: txt }),
-      });
+      try {
+        const res = await fetch(`/api/sessions/${session.id}/followup`, {
+          method: "POST",
+          body: JSON.stringify({ message: txt }),
+        });
 
-      mutate();
-      onFollowupSent();
+        if (!res.ok) {
+           throw new Error("Failed to send follow up");
+        }
+
+        mutate();
+        onFollowupSent?.();
+      } catch {
+        // roll back optimistic UI
+        setSent((prev) => prev.filter(m => m.content !== txt));
+        setMessage(txt); // put message back in the box
+        toast.error("Failed to send message");
+      }
     },
     [session, message, mutate, onFollowupSent],
   );
 
   if (!session) return null;
+
+  // Prefer live status if available
+  const currentStatus = data?.session?.status || session.status;
+  const currentSummary = data?.summary || session.summary;
 
   return (
     <Sheet open={!!session} onOpenChange={(open) => !open && onClose()}>
@@ -106,7 +122,7 @@ export function SessionDrawer({ session, onClose, onFollowupSent }: DrawerProps)
           </button>
 
           <div className="flex items-center gap-3 mb-2 pr-8">
-            <StatusBadge status={session.status} />
+            <StatusBadge status={currentStatus} />
             <Badge variant="outline" className="text-xs uppercase bg-zinc-900 border-zinc-800">
               {session.vendor}
             </Badge>
@@ -126,16 +142,16 @@ export function SessionDrawer({ session, onClose, onFollowupSent }: DrawerProps)
             <SheetTitle className="text-xl font-medium tracking-tight truncate leading-tight">
               {session.label || "Untitled Task"}
             </SheetTitle>
-            {session.summary && (
+            {currentSummary && (
               <SheetDescription className="text-sm text-zinc-400 line-clamp-2 leading-relaxed">
-                {session.summary}
+                {currentSummary}
               </SheetDescription>
             )}
           </SheetHeader>
         </div>
 
         <div ref={scrollRef} className="flex-1 overflow-y-auto bg-zinc-950 p-6 space-y-6">
-          {data?.messages?.length === 0 && sent.length === 0 ? (
+          {!data?.firstMessage && (!data?.messages || data?.messages.length === 0) && sent.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-zinc-500 space-y-4">
               <div className="h-12 w-12 rounded-full bg-zinc-900 flex items-center justify-center">
                 <CodeIcon className="h-6 w-6 opacity-50" />
@@ -146,6 +162,23 @@ export function SessionDrawer({ session, onClose, onFollowupSent }: DrawerProps)
             </div>
           ) : (
             <>
+              {data?.firstMessage && (
+                <div className="flex gap-4 group">
+                  <div className="flex-shrink-0 mt-1">
+                    <div className="h-8 w-8 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
+                      <BotIcon className="h-4 w-4 text-blue-400" />
+                    </div>
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-medium text-zinc-300">Agent</span>
+                    </div>
+                    <div className="text-sm text-zinc-400 whitespace-pre-wrap leading-relaxed prose prose-invert max-w-none">
+                      {data.firstMessage}
+                    </div>
+                  </div>
+                </div>
+              )}
               {data?.messages?.map((msg, idx) => (
                 <div key={idx} className="flex gap-4 group">
                   <div className="flex-shrink-0 mt-1">
@@ -200,7 +233,7 @@ export function SessionDrawer({ session, onClose, onFollowupSent }: DrawerProps)
           )}
         </div>
 
-        {session.status === "needs_review" && (
+        {currentStatus === "needs_review" && (
           <div className="border-t border-zinc-800 bg-zinc-950 p-4">
             <form onSubmit={handleSubmit} className="flex gap-3">
               <Textarea
