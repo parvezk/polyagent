@@ -10,6 +10,22 @@ export const VENDOR_META: Record<VendorKey, { label: string; color: string; hint
   gemini: { label: "Gemini", color: "#3B82F6", hint: "Antigravity · sandbox" },
 };
 
+// Fixed coordinates avoid server/browser floating-point serialization differences during hydration.
+const CLAUDE_SPOKES = [
+  [15, 12, 21, 12],
+  [14.598, 13.5, 19.794, 16.5],
+  [13.5, 14.598, 16.5, 19.794],
+  [12, 15, 12, 21],
+  [10.5, 14.598, 7.5, 19.794],
+  [9.402, 13.5, 4.206, 16.5],
+  [9, 12, 3, 12],
+  [9.402, 10.5, 4.206, 7.5],
+  [10.5, 9.402, 7.5, 4.206],
+  [12, 9, 12, 3],
+  [13.5, 9.402, 16.5, 4.206],
+  [14.598, 10.5, 19.794, 7.5],
+] as const;
+
 export function VendorIcon({ vendor, className = "size-4" }: { vendor: string; className?: string }) {
   const color = VENDOR_META[vendor as VendorKey]?.color ?? "#A1A1AA";
 
@@ -19,18 +35,9 @@ export function VendorIcon({ vendor, className = "size-4" }: { vendor: string; c
       return (
         <svg viewBox="0 0 24 24" className={className} aria-hidden>
           <g stroke={color} strokeWidth="2" strokeLinecap="round">
-            {Array.from({ length: 12 }).map((_, i) => {
-              const a = (i * Math.PI) / 6;
-              return (
-                <line
-                  key={i}
-                  x1={12 + Math.cos(a) * 3}
-                  y1={12 + Math.sin(a) * 3}
-                  x2={12 + Math.cos(a) * 9}
-                  y2={12 + Math.sin(a) * 9}
-                />
-              );
-            })}
+            {CLAUDE_SPOKES.map(([x1, y1, x2, y2], i) => (
+              <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} />
+            ))}
           </g>
         </svg>
       );
