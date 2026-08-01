@@ -1,8 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { mutate } from "swr";
-import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -22,63 +19,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { VendorIcon, VENDOR_META, type VendorKey } from "@/components/vendor-icon";
-
-const CLAUDE_MODELS = ["claude-opus-4-8", "claude-sonnet-4-6"];
-const VENDORS: VendorKey[] = ["claude", "jules", "cursor", "gemini"];
-const repoRequired = (v: VendorKey) => v === "jules" || v === "cursor";
+import { VendorIcon, VENDOR_META } from "@/components/vendor-icon";
+import { useAgentForm, CLAUDE_MODELS, VENDORS, repoRequired } from "./use-agent-form";
 
 export function NewAgentModal() {
-  const [open, setOpen] = useState(false);
-  const [vendor, setVendor] = useState<VendorKey>("claude");
-  const [model, setModel] = useState(CLAUDE_MODELS[0]);
-  const [repo, setRepo] = useState("");
-  const [branch, setBranch] = useState("");
-  const [repos, setRepos] = useState<{ repo: string; defaultBranch?: string }[]>([]);
-  const [prompt, setPrompt] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (open && vendor === "jules" && repos.length === 0) {
-      fetch("/api/jules/sources")
-        .then((r) => r.json())
-        .then((d) => {
-          setRepos(d.sources ?? []);
-          if (d.sources?.[0]) setRepo(d.sources[0].repo);
-        })
-        .catch(() => {});
-    }
-  }, [open, vendor, repos.length]);
-
-  async function launch() {
-    setSubmitting(true);
-    try {
-      const res = await fetch("/api/dispatch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          vendor,
-          prompt,
-          repo: repo || undefined,
-          branch: branch || undefined,
-          model: vendor === "claude" ? model : undefined,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Launch failed");
-      toast.success(`Launched ${VENDOR_META[vendor].label} · ${data.session.id}`);
-      mutate("/api/sessions");
-      setOpen(false);
-      setPrompt("");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Launch failed");
-    } finally {
-      setSubmitting(false);
-    }
-  }
+  const form = useAgentForm();
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={form.open} onOpenChange={form.setOpen}>
       <DialogTrigger render={<Button className="bg-[#D97757] text-zinc-950 hover:bg-[#c8694a]" />}>
         + New Agent
       </DialogTrigger>
@@ -97,12 +45,12 @@ export function NewAgentModal() {
             <label className="text-xs font-medium text-zinc-400">Vendor</label>
             <div className="grid grid-cols-4 gap-2">
               {VENDORS.map((v) => {
-                const selected = v === vendor;
+                const selected = v === form.vendor;
                 return (
                   <button
                     key={v}
                     type="button"
-                    onClick={() => setVendor(v)}
+                    onClick={() => form.setVendor(v)}
                     className={`flex flex-col items-center gap-1.5 rounded-lg border px-2 py-3 transition-all ${
                       selected
                         ? "border-[#D97757] bg-[#D97757]/10 ring-1 ring-[#D97757]/40"
@@ -119,21 +67,22 @@ export function NewAgentModal() {
                 );
               })}
             </div>
-            <p className="text-xs text-zinc-500">{VENDOR_META[vendor].hint}</p>
+            <p className="text-xs text-zinc-500">{VENDOR_META[form.vendor].hint}</p>
           </div>
 
           {/* Repo (+ branch) */}
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-zinc-400">
-              Repo {repoRequired(vendor) ? "" : <span className="text-zinc-600">(optional)</span>}
+              Repo{" "}
+              {repoRequired(form.vendor) ? "" : <span className="text-zinc-600">(optional)</span>}
             </label>
-            {vendor === "jules" ? (
-              <Select value={repo} onValueChange={(v) => v && setRepo(v)}>
+            {form.vendor === "jules" ? (
+              <Select value={form.repo} onValueChange={(v) => v && form.setRepo(v)}>
                 <SelectTrigger className="border-zinc-700 bg-zinc-950/50">
                   <SelectValue placeholder="Select a connected repo" />
                 </SelectTrigger>
                 <SelectContent className="border-zinc-700 bg-zinc-900 text-zinc-100">
-                  {repos.map((r) => (
+                  {form.repos.map((r) => (
                     <SelectItem key={r.repo} value={r.repo}>
                       {r.repo} {r.defaultBranch ? `(${r.defaultBranch})` : ""}
                     </SelectItem>
@@ -143,14 +92,14 @@ export function NewAgentModal() {
             ) : (
               <div className="grid grid-cols-3 gap-2">
                 <Input
-                  value={repo}
-                  onChange={(e) => setRepo(e.target.value)}
+                  value={form.repo}
+                  onChange={(e) => form.setRepo(e.target.value)}
                   placeholder="owner/repo"
                   className="col-span-2 border-zinc-700 bg-zinc-950/50"
                 />
                 <Input
-                  value={branch}
-                  onChange={(e) => setBranch(e.target.value)}
+                  value={form.branch}
+                  onChange={(e) => form.setBranch(e.target.value)}
                   placeholder="branch (optional)"
                   className="border-zinc-700 bg-zinc-950/50"
                 />
@@ -158,10 +107,10 @@ export function NewAgentModal() {
             )}
           </div>
 
-          {vendor === "claude" && (
+          {form.vendor === "claude" && (
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-zinc-400">Model</label>
-              <Select value={model} onValueChange={(v) => v && setModel(v)}>
+              <Select value={form.model} onValueChange={(v) => v && form.setModel(v)}>
                 <SelectTrigger className="border-zinc-700 bg-zinc-950/50">
                   <SelectValue />
                 </SelectTrigger>
@@ -179,8 +128,8 @@ export function NewAgentModal() {
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-zinc-400">Task</label>
             <Textarea
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
+              value={form.prompt}
+              onChange={(e) => form.setPrompt(e.target.value)}
               placeholder="e.g. Identify any security/XSS flaws in the repo"
               className="min-h-24 border-zinc-700 bg-zinc-950/50"
             />
@@ -189,11 +138,13 @@ export function NewAgentModal() {
 
         <DialogFooter>
           <Button
-            onClick={launch}
-            disabled={submitting || !prompt.trim() || (repoRequired(vendor) && !repo)}
+            onClick={form.launch}
+            disabled={
+              form.submitting || !form.prompt.trim() || (repoRequired(form.vendor) && !form.repo)
+            }
             className="bg-[#D97757] text-zinc-950 hover:bg-[#c8694a]"
           >
-            {submitting ? "Launching…" : "Launch agent"}
+            {form.submitting ? "Launching…" : "Launch agent"}
           </Button>
         </DialogFooter>
       </DialogContent>
