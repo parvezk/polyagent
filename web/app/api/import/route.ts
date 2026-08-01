@@ -17,8 +17,10 @@ export async function POST() {
     const fileSessions = new StateStore(STATE_PATH).list();
     if (fileSessions.length > 0) {
       const rows = fileSessions.map((s) => toDbRow(s, userId));
-      // TODO: Implement batching for large state files to avoid payload limits
-      await upsertSessions(rows);
+      const BATCH_SIZE = 100;
+      for (let i = 0; i < rows.length; i += BATCH_SIZE) {
+        await upsertSessions(rows.slice(i, i + BATCH_SIZE));
+      }
       imported = rows.length;
     }
   } catch {
