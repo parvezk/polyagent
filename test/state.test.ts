@@ -39,4 +39,21 @@ describe("StateStore", () => {
     expect(store.list()).toEqual([]);
     expect(store.get("nope")).toBeUndefined();
   });
+
+  it("upsertMany replaces/inserts multiple sessions and saves once", () => {
+    const store = new StateStore(join(dir, "state.json"));
+    store.upsert(makeSession("a"));
+    store.upsert(makeSession("b"));
+
+    store.upsertMany([{ ...makeSession("a"), status: "completed" }, makeSession("c")]);
+
+    expect(store.list()).toHaveLength(3);
+    expect(store.get("a")?.status).toBe("completed");
+    expect(store.get("b")?.status).toBe("running");
+    expect(store.get("c")?.status).toBe("running");
+
+    const reloaded = new StateStore(join(dir, "state.json"));
+    expect(reloaded.list()).toHaveLength(3);
+    expect(reloaded.get("a")?.status).toBe("completed");
+  });
 });
