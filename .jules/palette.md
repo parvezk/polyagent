@@ -1,0 +1,3 @@
+## 2024-08-01 - Missing ARIA bindings on custom controls
+**Learning:** Custom non-semantic dropdowns, radio groups, and textareas can lose context without explicit ARIA relationships. `Select` and `Textarea` components required manual `aria-labelledby` linking to their custom UI labels, and `Input` fields acting solely via placeholder needed specific `aria-label`s. The custom grid of vendor buttons was entirely unreadable to screen readers until `role="radiogroup"` and `role="radio"` were implemented.
+**Action:** Always verify that interactive custom components explicitly map back to a label ID using `aria-labelledby` and wrap custom radio selections in a `radiogroup` role with accurate `aria-checked` states.
