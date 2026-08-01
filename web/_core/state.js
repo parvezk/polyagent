@@ -16,9 +16,9 @@ export class StateStore {
         this.sessions = data.sessions ?? [];
     }
     save() {
-        mkdirSync(dirname(this.path), { recursive: true });
+        mkdirSync(dirname(this.path), { recursive: true, mode: 0o700 });
         const data = { sessions: this.sessions };
-        writeFileSync(this.path, JSON.stringify(data, null, 2));
+        writeFileSync(this.path, JSON.stringify(data, null, 2), { mode: 0o600 });
     }
     upsert(session) {
         const i = this.sessions.findIndex((s) => s.id === session.id);
