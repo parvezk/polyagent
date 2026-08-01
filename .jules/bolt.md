@@ -1,0 +1,3 @@
+## 2025-02-12 - Prevent Redundant DB Updates in Serverless Polling Route
+**Learning:** Polling external services inside a `Promise.all` can result in redundant database update queries if the state hasn't changed. Performing full-object upserts for these updates can introduce race conditions if the rest of the object has been modified asynchronously.
+**Action:** Filter out redundant database updates by strictly checking if the polled state has changed. Retain the use of targeted partial updates (e.g., `patchSession`) wrapped in `try/catch` to prevent unhandled rejections while reducing unnecessary queries.

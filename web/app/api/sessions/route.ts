@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { buildAdapter } from "@/lib/core";
-import { listSessions, patchSession } from "@/lib/sessions-store";
+import { listSessions, patchSession, type DbSession } from "@/lib/sessions-store";
 
 export const dynamic = "force-dynamic"; // always fresh; never cache live status
 
 // GET /api/sessions — list the user's sessions (RLS-scoped), polling each vendor live.
 export async function GET() {
-  let sessions;
+  let sessions: DbSession[];
   try {
     sessions = await listSessions();
   } catch {
@@ -24,7 +24,11 @@ export async function GET() {
         status = live.status;
         lastUpdate = live.lastUpdate.toISOString();
         summary = live.summary;
-        await patchSession(s.id, { status: live.status, last_polled: lastUpdate });
+
+        // ⚡ Bolt: Prevent redundant DB updates if status hasn't changed
+        if (s.status !== status || s.last_polled !== lastUpdate) {
+          await patchSession(s.id, { status: live.status, last_polled: lastUpdate });
+        }
       } catch {
         // keep last-known status
       }
