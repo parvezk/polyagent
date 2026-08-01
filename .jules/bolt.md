@@ -1,0 +1,3 @@
+## 2026-07-21 - Optimizing database queries inside map loops
+**Learning:** Performing database writes sequentially inside an N-element `map`/`Promise.all` creates an N+1 query performance bottleneck that degrades the endpoint proportionally to the amount of data processed. In our `/api/sessions` route, polling terminal states triggers redundant writes for unmodified records.
+**Action:** When updating database records iteratively, batch those updates into an array and submit them with a single upsert operation outside the loop (like `upsertSessions`). Filter unchanged or unchanged-terminal records in memory prior to upserting to minimize payload size.
