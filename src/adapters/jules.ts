@@ -2,25 +2,7 @@ import type { AgentAdapter } from "./adapter.js";
 import type { AgentSession, AgentStatus, AgentOutput, DispatchRequest } from "../types.js";
 import type { JulesPort, JulesState } from "./jules-port.js";
 import { labelFromPrompt } from "../utils/text.js";
-
-function mapState(state: JulesState): AgentSession["status"] {
-  switch (state) {
-    case "QUEUED":
-    case "PLANNING":
-    case "IN_PROGRESS":
-    case "PAUSED":
-      return "running";
-    case "AWAITING_PLAN_APPROVAL":
-    case "AWAITING_USER_FEEDBACK":
-      return "needs_review";
-    case "COMPLETED":
-      return "completed";
-    case "FAILED":
-      return "failed";
-    default:
-      return "unknown";
-  }
-}
+import { normalizeSessionStatus } from "../utils/status.js";
 
 export class JulesAdapter implements AgentAdapter {
   readonly vendor = "jules" as const;
@@ -38,7 +20,7 @@ export class JulesAdapter implements AgentAdapter {
       id: sessionId,
       vendor: this.vendor,
       label: labelFromPrompt(req.prompt),
-      status: mapState(state),
+      status: normalizeSessionStatus(state),
       dispatchedAt: new Date().toISOString(),
     };
   }
@@ -47,7 +29,7 @@ export class JulesAdapter implements AgentAdapter {
     try {
       const { state, lastMessage } = await this.port.getSession(sessionId);
       return {
-        status: mapState(state),
+        status: normalizeSessionStatus(state),
         lastUpdate: new Date(),
         summary: lastMessage,
         needsInput: state.startsWith("AWAITING"),

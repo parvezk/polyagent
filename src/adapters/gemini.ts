@@ -2,26 +2,7 @@ import type { AgentAdapter } from "./adapter.js";
 import type { AgentSession, AgentStatus, AgentOutput, DispatchRequest } from "../types.js";
 import type { GeminiPort, GeminiInteractionStatus } from "./gemini-port.js";
 import { labelFromPrompt, withRepoInstruction } from "../utils/text.js";
-
-// ---------------------------------------------------------------------------
-// Status mapping: Gemini Interactions API → normalized SessionStatus
-// ---------------------------------------------------------------------------
-
-function mapStatus(s: GeminiInteractionStatus | string): AgentSession["status"] {
-  switch (s) {
-    case "in_progress":
-      return "running";
-    case "completed":
-      return "completed";
-    case "failed":
-    case "cancelled":
-      return "failed";
-    case "requires_action":
-      return "needs_review"; // agent is waiting on the human (parallel to Jules AWAITING_*)
-    default:
-      return "unknown";
-  }
-}
+import { normalizeSessionStatus } from "../utils/status.js";
 
 // ---------------------------------------------------------------------------
 // GeminiAdapter
@@ -44,7 +25,7 @@ export class GeminiAdapter implements AgentAdapter {
       id: created.interactionId,
       vendor: this.vendor,
       label: labelFromPrompt(req.prompt),
-      status: mapStatus(created.status),
+      status: normalizeSessionStatus(created.status),
       dispatchedAt: new Date().toISOString(),
       outputUrl: req.repo ? `https://github.com/${req.repo}` : undefined,
       firstMessage: created.firstReply,
@@ -56,7 +37,7 @@ export class GeminiAdapter implements AgentAdapter {
     try {
       const result = await this.port.getStatus(sessionId);
       return {
-        status: mapStatus(result.status),
+        status: normalizeSessionStatus(result.status),
         lastUpdate: new Date(),
         summary: result.summary,
         needsInput: result.status === "requires_action",
