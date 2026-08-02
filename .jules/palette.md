@@ -1,0 +1,3 @@
+## 2024-08-02 - Custom interactive UI components require explicit ARIA roles
+**Learning:** Custom interactive UI components (like div-based radio buttons or custom selections) lack native HTML semantics and do not naturally communicate their state or role to assistive technologies. Without these, screen reader users might not know what the component is or how to interact with it.
+**Action:** When creating custom inputs like radio groups using non-native HTML elements (e.g. `<div>` or `<button>` without `input type="radio"`), explicitly provide ARIA roles (like `role="radiogroup"` and `role="radio"`), state attributes (like `aria-checked`), and proper labeling (`aria-labelledby`, `aria-label`, or `id`/`htmlFor`) to maintain accessibility.
