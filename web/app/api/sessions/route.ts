@@ -21,10 +21,17 @@ export async function GET() {
       let summary: string | undefined;
       try {
         const live = await buildAdapter(s.vendor).getStatus(s.id);
+
+        // Skip patching DB if the session was already terminal and status hasn't changed.
+        const isTerminal = s.status === "completed" || s.status === "failed";
+        const statusUnchanged = live.status === s.status;
+        if (!isTerminal || !statusUnchanged) {
+          await patchSession(s.id, { status: live.status, last_polled: live.lastUpdate.toISOString() });
+        }
+
         status = live.status;
         lastUpdate = live.lastUpdate.toISOString();
         summary = live.summary;
-        await patchSession(s.id, { status: live.status, last_polled: lastUpdate });
       } catch {
         // keep last-known status
       }
