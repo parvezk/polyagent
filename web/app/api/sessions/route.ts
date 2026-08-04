@@ -21,10 +21,16 @@ export async function GET() {
       let summary: string | undefined;
       try {
         const live = await buildAdapter(s.vendor).getStatus(s.id);
+        const isUnchangedTerminal =
+          (s.status === "completed" || s.status === "failed") && s.status === live.status;
+
         status = live.status;
         lastUpdate = live.lastUpdate.toISOString();
         summary = live.summary;
-        await patchSession(s.id, { status: live.status, last_polled: lastUpdate });
+
+        if (!isUnchangedTerminal) {
+          await patchSession(s.id, { status: live.status, last_polled: lastUpdate });
+        }
       } catch {
         // keep last-known status
       }

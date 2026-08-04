@@ -18,13 +18,16 @@ async function collectRows(store: StateStore, sessionId?: string): Promise<Statu
     sessions.map(async (s) => {
       let status = s.status;
       let updatedAt = s.lastPolled ?? s.dispatchedAt;
-      try {
-        const live = await buildAdapter(s.vendor).getStatus(s.id);
-        status = live.status;
-        updatedAt = live.lastUpdate.toISOString();
-        store.upsert({ ...s, status: live.status, lastPolled: updatedAt });
-      } catch {
-        // keep last-known status
+      // Skip API polling for terminal states since the CLI doesn't need the summary
+      if (status !== "completed" && status !== "failed") {
+        try {
+          const live = await buildAdapter(s.vendor).getStatus(s.id);
+          status = live.status;
+          updatedAt = live.lastUpdate.toISOString();
+          store.upsert({ ...s, status: live.status, lastPolled: updatedAt });
+        } catch {
+          // keep last-known status
+        }
       }
       return {
         vendor: s.vendor,
