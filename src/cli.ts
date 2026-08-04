@@ -56,4 +56,7 @@ program
   .description("Send a follow-up message to a running session")
   .action((sessionId: string, message: string) => followupCommand(sessionId, message));
 
-program.parseAsync();
+program.parseAsync().catch((err) => {
+  console.error(err instanceof Error ? err.message : String(err));
+  process.exit(1);
+});
