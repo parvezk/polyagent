@@ -21,10 +21,17 @@ export async function GET() {
       let summary: string | undefined;
       try {
         const live = await buildAdapter(s.vendor).getStatus(s.id);
+
+        // Only patch the database if the status has changed or the lastUpdate timestamp differs
+        const currentLastPolled = s.last_polled ?? s.dispatched_at;
+        const liveLastUpdateStr = live.lastUpdate.toISOString();
+        if (s.status !== live.status || currentLastPolled !== liveLastUpdateStr) {
+          await patchSession(s.id, { status: live.status, last_polled: liveLastUpdateStr });
+        }
+
         status = live.status;
-        lastUpdate = live.lastUpdate.toISOString();
+        lastUpdate = liveLastUpdateStr;
         summary = live.summary;
-        await patchSession(s.id, { status: live.status, last_polled: lastUpdate });
       } catch {
         // keep last-known status
       }
