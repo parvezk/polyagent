@@ -1,0 +1,3 @@
+## 2025-02-05 - Missing ARIA attributes on custom grid-based radio buttons
+**Learning:** Custom interactive UI components like grid-based radio buttons (e.g., in the New Agent modal) require explicit ARIA roles (like `role="radiogroup"` and `role="radio"`) and states (`aria-checked`) to maintain proper screen reader accessibility, as the visual grid layout does not automatically convey their function as radio elements. Shared inputs (like Repo and Branch) under a single visual label also require individual `aria-label`s.
+**Action:** Always add explicit ARIA roles, states, and individual labels to visually grouped custom interactive elements that do not use native HTML form controls.
