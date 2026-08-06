@@ -19,12 +19,18 @@ export async function GET() {
       let status = s.status;
       let lastUpdate = s.last_polled ?? s.dispatched_at;
       let summary: string | undefined;
+
+      // If it's already terminal, we still might need the summary.
+      // But we can skip the patchSession if nothing changes.
       try {
         const live = await buildAdapter(s.vendor).getStatus(s.id);
         status = live.status;
         lastUpdate = live.lastUpdate.toISOString();
         summary = live.summary;
-        await patchSession(s.id, { status: live.status, last_polled: lastUpdate });
+
+        if (s.status !== live.status || s.last_polled !== lastUpdate) {
+          await patchSession(s.id, { status: live.status, last_polled: lastUpdate });
+        }
       } catch {
         // keep last-known status
       }

@@ -1,0 +1,3 @@
+## 2025-02-28 - Avoid redundant polling and DB writes for PolyAgent sessions
+**Learning:** PolyAgent sessions have terminal states (`completed`, `failed`). Polling external vendors for status updates on terminal sessions, and rewriting unmodified status states back to the database, introduces significant redundant network overhead and unnecessary DB writes. For the CLI, we can skip API polling entirely since the 'summary' isn't used. For the web UI which needs the summary, we can skip the database write if the status and timestamp haven't changed.
+**Action:** Always check if a session is in a terminal state before making external network calls if full data is not needed. Compare new state against existing state before performing database updates to reduce DB write load.
