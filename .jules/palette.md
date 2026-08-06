@@ -1,0 +1,3 @@
+## 2024-08-06 - Explicit ARIA roles and labels for custom interactive components
+**Learning:** Custom interactive UI components like div/button-based radio groups and forms relying on placeholders are inaccessible to screen readers without explicit ARIA definitions. Even if visual cues indicate state (e.g., active borders or placeholder text), assistive technologies require explicit attributes.
+**Action:** When building custom interactive component groups, strictly ensure proper ARIA roles (e.g. `role="radiogroup"`, `role="radio"`), states (`aria-checked`), and label associations (`aria-labelledby`, `aria-label`, `htmlFor` pairings). For inputs that only have a placeholder visually grouped, always provide a specific `aria-label`.
