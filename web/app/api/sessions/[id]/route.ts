@@ -19,9 +19,12 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
 
   try {
     const live = await adapter.getStatus(id);
+    const newLastUpdate = live.lastUpdate.toISOString();
     status = live.status;
     summary = live.summary;
-    await patchSession(id, { status: live.status, last_polled: live.lastUpdate.toISOString() });
+    if (live.status !== session.status || newLastUpdate !== session.last_polled) {
+      await patchSession(id, { status: live.status, last_polled: newLastUpdate });
+    }
   } catch {
     /* keep last-known */
   }
