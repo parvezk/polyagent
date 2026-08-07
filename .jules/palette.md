@@ -1,0 +1,3 @@
+## 2024-08-07 - Accessibility for custom components and multiple inputs
+**Learning:** Custom interactive UI components like div-based radio buttons require explicit ARIA roles (like `role="radiogroup"` and `role="radio"`), states (`aria-checked`), and `aria-label`/`aria-labelledby` attributes to maintain proper screen reader accessibility. Additionally, when multiple form inputs share a single visual label (e.g. grouped inputs for Repository and Branch), each individual input requires its own explicit `aria-label` attribute.
+**Action:** Always add proper ARIA roles and labels for custom interactive components and grouped form inputs that lack individual visual labels.
