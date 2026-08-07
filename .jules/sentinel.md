@@ -1,4 +1,4 @@
-## 2026-07-15 - Missing API Route Authentication Due to Middleware Bypass
-**Vulnerability:** The GET endpoint `/api/jules/sources` exposed connected repositories (data leak) without requiring authentication.
-**Learning:** Next.js middleware in this project excludes `/api` paths from global authentication (`matcher: ["/((?!...|api|...).*)"]`). This means every individual API route must explicitly perform its own auth check (e.g., via `currentUserId()`), and any omission results in a critical missing authentication vulnerability.
-**Prevention:** Whenever adding or modifying an endpoint under `/api/`, verify that `currentUserId()` (or an equivalent manual auth check) is invoked at the start of the handler.
+## 2025-02-14 - Fix local information disclosure vulnerability in state file
+**Vulnerability:** The CLI's file-based state store (`~/.polyagent/state.json`) was being created with default file system permissions, potentially allowing other local users on the system to read or modify sensitive session data.
+**Learning:** Default `fs.writeFileSync` and `fs.mkdirSync` permissions can be too permissive for sensitive data storage in local CLI tools. Node's `mode` option in `fs.writeFileSync` only applies when creating a new file, not when overwriting an existing one.
+**Prevention:** Always explicitly set strict file permissions (`0o600` for files, `0o700` for directories) when creating local configuration or state files. If a file might already exist and be overwritten, use `fs.chmodSync` to guarantee the final permissions are correct. Be careful not to unconditionally run `chmodSync(0o700)` on parent directories to avoid altering shared paths like `/tmp`.
