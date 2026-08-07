@@ -1,0 +1,3 @@
+## 2026-08-07 - Skip External Polling and Redundant DB Writes
+**Learning:** Terminal sessions (`completed`, `failed`) don't need continuous external polling if the result (like a `summary`) is not required (e.g., in the CLI). Even when polling is required (e.g., Web API to get `summary` since it's not stored in DB), redundant database writes occur if the object state hasn't changed.
+**Action:** When repeatedly polling external services for state, bypass the network request if the current state is known to be terminal and subsequent fields aren't needed. Always compare polled fields against the local/DB state and conditionally skip the write operations (`patchSession`/`store.upsert`) to reduce I/O and DB load.

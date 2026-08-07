@@ -21,10 +21,13 @@ export async function GET() {
       let summary: string | undefined;
       try {
         const live = await buildAdapter(s.vendor).getStatus(s.id);
-        status = live.status;
-        lastUpdate = live.lastUpdate.toISOString();
+        const newLastUpdate = live.lastUpdate.toISOString();
         summary = live.summary;
-        await patchSession(s.id, { status: live.status, last_polled: lastUpdate });
+        if (live.status !== status || newLastUpdate !== s.last_polled) {
+          await patchSession(s.id, { status: live.status, last_polled: newLastUpdate });
+        }
+        status = live.status;
+        lastUpdate = newLastUpdate;
       } catch {
         // keep last-known status
       }
