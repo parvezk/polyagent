@@ -1,10 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { realClaudePort } from "../src/adapters/claude-port.js";
-import {
-  CLAUDE_AGENT_TOOLSET,
-  DEFAULT_AGENT_SYSTEM_PROMPT,
-  DEFAULT_CLAUDE_MODEL,
-} from "../src/constants/claude.js";
+import { CLAUDE_AGENT_TOOLSET, DEFAULT_AGENT_SYSTEM_PROMPT } from "../src/constants/claude.js";
 
 const anthropicSdk = vi.hoisted(() => ({
   construct: vi.fn(),
@@ -45,6 +41,14 @@ function eventStream(events: unknown[]): AsyncIterable<unknown> {
   };
 }
 
+function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
+}
+
 beforeEach(() => {
   vi.resetAllMocks();
   anthropicSdk.createAgent.mockResolvedValue({ id: "agent-123" });
@@ -60,28 +64,36 @@ afterEach(() => {
 describe("realClaudePort", () => {
   it("binds the created resources, subscribes before sending, and returns the first text reply", async () => {
     vi.spyOn(Date, "now").mockReturnValue(1_786_163_400_000);
-    anthropicSdk.streamEvents.mockResolvedValue(
+    const streamReady = deferred<AsyncIterable<unknown>>();
+    anthropicSdk.streamEvents.mockReturnValue(streamReady.promise);
+
+    const resultPromise = realClaudePort("test-api-key").createSession({
+      prompt: "Fix the billing webhook\nInclude regression tests",
+      modelId: "claude-sonnet-5",
+    });
+
+    await vi.waitFor(() =>
+      expect(anthropicSdk.streamEvents).toHaveBeenCalledWith("session-789"),
+    );
+    expect(anthropicSdk.sendEvents).not.toHaveBeenCalled();
+
+    streamReady.resolve(
       eventStream([
-        { type: "session.started" },
         {
           type: "agent.message",
           content: [
             { type: "text", text: "Ready " },
-            { type: "tool_use", name: "bash" },
             { type: "text", text: "to help." },
           ],
         },
       ]),
     );
-
-    const result = await realClaudePort("test-api-key").createSession({
-      prompt: "Fix the billing webhook\nInclude regression tests",
-    });
+    const result = await resultPromise;
 
     expect(anthropicSdk.construct).toHaveBeenCalledWith({ apiKey: "test-api-key" });
     expect(anthropicSdk.createAgent).toHaveBeenCalledWith({
       name: "polyagent-1786163400000",
-      model: DEFAULT_CLAUDE_MODEL,
+      model: "claude-sonnet-5",
       system: DEFAULT_AGENT_SYSTEM_PROMPT,
       tools: [{ type: CLAUDE_AGENT_TOOLSET }],
     });
@@ -106,9 +118,6 @@ describe("realClaudePort", () => {
         },
       ],
     });
-    expect(anthropicSdk.streamEvents.mock.invocationCallOrder[0]).toBeLessThan(
-      anthropicSdk.sendEvents.mock.invocationCallOrder[0],
-    );
     expect(result).toEqual({
       sessionId: "session-789",
       firstReply: "Ready to help.",
