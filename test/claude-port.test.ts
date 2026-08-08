@@ -72,9 +72,7 @@ describe("realClaudePort", () => {
       modelId: "claude-sonnet-5",
     });
 
-    await vi.waitFor(() =>
-      expect(anthropicSdk.streamEvents).toHaveBeenCalledWith("session-789"),
-    );
+    await vi.waitFor(() => expect(anthropicSdk.streamEvents).toHaveBeenCalledWith("session-789"));
     expect(anthropicSdk.sendEvents).not.toHaveBeenCalled();
 
     streamReady.resolve(
