@@ -21,10 +21,17 @@ export async function GET() {
       let summary: string | undefined;
       try {
         const live = await buildAdapter(s.vendor).getStatus(s.id);
-        status = live.status;
-        lastUpdate = live.lastUpdate.toISOString();
+        const liveStatus = live.status;
+        const liveLastUpdate = live.lastUpdate.toISOString();
+
+        status = liveStatus;
+        lastUpdate = liveLastUpdate;
         summary = live.summary;
-        await patchSession(s.id, { status: live.status, last_polled: lastUpdate });
+
+        // Optimization: Only patch the session in the database if the status or lastUpdate timestamp actually changed, avoiding redundant database writes
+        if (liveStatus !== s.status || liveLastUpdate !== s.last_polled) {
+          await patchSession(s.id, { status: liveStatus, last_polled: liveLastUpdate });
+        }
       } catch {
         // keep last-known status
       }
