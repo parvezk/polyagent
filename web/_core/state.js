@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync, chmodSync } from "node:fs";
 import { dirname } from "node:path";
 export class StateStore {
     path;
@@ -16,9 +16,14 @@ export class StateStore {
         this.sessions = data.sessions ?? [];
     }
     save() {
-        mkdirSync(dirname(this.path), { recursive: true });
+        const dir = dirname(this.path);
+        mkdirSync(dir, { recursive: true, mode: 0o700 });
         const data = { sessions: this.sessions };
-        writeFileSync(this.path, JSON.stringify(data, null, 2));
+        writeFileSync(this.path, JSON.stringify(data, null, 2), { mode: 0o600 });
+        try {
+            chmodSync(this.path, 0o600);
+        }
+        catch { /* ignore if we don't own it */ }
     }
     upsert(session) {
         const i = this.sessions.findIndex((s) => s.id === session.id);
