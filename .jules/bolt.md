@@ -1,0 +1,3 @@
+## 2024-08-09 - Avoid redundant I/O in polling loops
+**Learning:** In PolyAgent, the API and CLI repeatedly poll agent statuses. Unconditionally writing the polled state back to the store (either local file or database) causes redundant I/O operations for unchanged states, impacting performance. Additionally, the CLI doesn't need summaries for terminal states, meaning those external API calls can be skipped entirely.
+**Action:** When polling states, explicitly check if the polled values differ from the stored values before calling the `upsert` or `patchSession` functions. Also, skip external polling completely for terminal states (completed/failed) if the downstream consumer (like the CLI) doesn't require a summary.
