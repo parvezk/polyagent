@@ -49,6 +49,24 @@ describe("realGeminiPort", () => {
     });
   });
 
+  it("uses the default agent when no model is requested", async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValueOnce(
+      jsonResponse({
+        id: "interaction-123",
+        status: "in_progress",
+        output_text: "",
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await realGeminiPort("test-api-key").createInteraction({
+      prompt: "Fix the import flow",
+    });
+
+    const request = fetchMock.mock.calls[0];
+    expect(JSON.parse(String(request?.[1]?.body)).agent).toBe(ANTIGRAVITY_AGENT);
+  });
+
   it("retrieves and normalizes interaction status", async () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValueOnce(
       jsonResponse({
