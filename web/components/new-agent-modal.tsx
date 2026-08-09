@@ -95,13 +95,14 @@ export function NewAgentModal() {
           {/* Vendor — icon radio tiles */}
           <div className="space-y-1.5">
             <label className="text-xs font-medium text-zinc-400">Vendor</label>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-4 gap-2" role="group" aria-label="Vendor">
               {VENDORS.map((v) => {
                 const selected = v === vendor;
                 return (
                   <button
                     key={v}
                     type="button"
+                    aria-pressed={selected}
                     onClick={() => setVendor(v)}
                     className={`flex flex-col items-center gap-1.5 rounded-lg border px-2 py-3 transition-all ${
                       selected
@@ -145,12 +146,14 @@ export function NewAgentModal() {
                 <Input
                   value={repo}
                   onChange={(e) => setRepo(e.target.value)}
+                  aria-label="Repository"
                   placeholder="owner/repo"
                   className="col-span-2 border-zinc-700 bg-zinc-950/50"
                 />
                 <Input
                   value={branch}
                   onChange={(e) => setBranch(e.target.value)}
+                  aria-label="Branch"
                   placeholder="branch (optional)"
                   className="border-zinc-700 bg-zinc-950/50"
                 />

@@ -1,0 +1,3 @@
+## 2026-08-09 - Accessible Simulated Radio Groups and Shared Labels
+**Learning:** Custom interactive UI components require explicit ARIA roles and states for screen readers. When using standard `<button>` elements to simulate radio groups, prefer `role="group"` on the container and `aria-pressed` on the buttons to avoid breaking standard keyboard navigation. When multiple form inputs share a single visual label, each individual input requires its own explicit `aria-label`.
+**Action:** Always add `role="group"` and `aria-pressed` for simulated button-based radio groups, and always ensure `aria-label` is present on individual inputs sharing a visual label.
