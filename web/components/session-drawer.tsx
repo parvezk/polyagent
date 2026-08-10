@@ -32,6 +32,16 @@ export function SessionDrawer({
   const [sending, setSending] = useState(false);
   // Optimistically-shown follow-ups (server output may not echo them back).
   const [sent, setSent] = useState<string[]>([]);
+
+  const currentSessionId = session?.id ?? null;
+  const [prevSessionId, setPrevSessionId] = useState<string | null>(currentSessionId);
+
+  if (currentSessionId !== prevSessionId) {
+    setPrevSessionId(currentSessionId);
+    setSent([]);
+    setMessage("");
+  }
+
   const { data } = useSWR<DetailResponse>(
     session ? `/api/sessions/${session.id}` : null,
     fetcher,
