@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { buildAdapter } from "@/lib/core";
-import { getSession } from "@/lib/sessions-store";
+import { getSession, patchSession } from "@/lib/sessions-store";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +19,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
   try {
     await buildAdapter(session.vendor).sendFollowup(id, message);
+    await patchSession(id, { status: "running", last_polled: new Date().toISOString() });
     return NextResponse.json({ ok: true });
   } catch (err) {
     return NextResponse.json(
