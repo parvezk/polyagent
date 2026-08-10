@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { buildAdapter } from "@/lib/core";
-import { listSessions, upsertSessions, type DbSession } from "@/lib/sessions-store";
+import { listSessions, patchSession, type DbSession } from "@/lib/sessions-store";
 import pLimit from "p-limit";
 
 export const dynamic = "force-dynamic"; // always fresh; never cache live status
@@ -18,7 +18,7 @@ export async function GET() {
   }
 
   const limit = pLimit(CONCURRENCY_LIMIT);
-  const updatedSessions: DbSession[] = [];
+  const patchPromises: Promise<void>[] = [];
 
   const rows = await Promise.all(
     sessions.map((s) =>
@@ -39,13 +39,15 @@ export async function GET() {
               lastUpdate = liveLastUpdate;
               summary = live.summary;
 
-              // We need to keep all fields intact for upsert, so copy the original session
-              // and update only the fields that changed.
-              updatedSessions.push({
-                ...s,
-                status,
-                last_polled: lastUpdate,
-              });
+              patchPromises.push(
+                (async () => {
+                  try {
+                    await patchSession(s.id, { status, last_polled: lastUpdate });
+                  } catch (e) {
+                    console.error("Failed to patch session:", e);
+                  }
+                })(),
+              );
             } else {
               summary = live.summary;
             }
@@ -69,12 +71,8 @@ export async function GET() {
     ),
   );
 
-  if (updatedSessions.length > 0) {
-    try {
-      await upsertSessions(updatedSessions);
-    } catch (e) {
-      console.error("Failed to bulk upsert sessions:", e);
-    }
+  if (patchPromises.length > 0) {
+    await Promise.all(patchPromises);
   }
 
   return NextResponse.json({ sessions: rows });
