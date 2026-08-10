@@ -33,8 +33,8 @@ export async function GET() {
             const live = await buildAdapter(s.vendor).getStatus(s.id);
             const liveLastUpdate = live.lastUpdate.toISOString();
 
-            // Only flag for update if something changed
-            if (status !== live.status || lastUpdate !== liveLastUpdate) {
+            // Persist only status changes or the first successful poll timestamp.
+            if (status !== live.status || s.last_polled === null) {
               status = live.status;
               lastUpdate = liveLastUpdate;
               summary = live.summary;
