@@ -2,6 +2,8 @@
 
 **Date:** 2026-06-26 · **Target:** June 27 workshop demo
 
+> **Status:** Shipped and evolved past this plan. The live app uses Supabase auth + RLS (not the JSON file for persistence), includes `/api/import` for CLI→web migration, Cursor/Gemini vendors, auth on `/api/jules/sources`, and list/detail polling that skips terminal sessions. See [`web/README.md`](../web/README.md).
+
 ## Decisions (locked)
 
 - **Runs:** local Next dev (`localhost`), reuses the existing JSON state file (`~/.polyagent/state.json`). Vercel + Supabase = fast-follow after the workshop.

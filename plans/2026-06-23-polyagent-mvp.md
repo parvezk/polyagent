@@ -1,5 +1,7 @@
 # PolyAgent MVP Implementation Plan (V1)
 
+> **Status (2026-08):** Historical V1 plan. Core CLI + Claude/Jules adapters shipped; Cursor/Gemini, web dashboard, and follow-up are beyond this document. Prefer [`README.md`](../README.md) for current surface area.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (for isolated tasks) or superpowers:executing-plans (for inline/connective tasks) per the **Execution mode** noted on each task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** A TypeScript CLI (`polyagent`) that dispatches and tracks cloud coding agents across two vendors — **Claude Managed Agents** (official SDK) and **Google Jules** (raw REST) — from one unified interface.

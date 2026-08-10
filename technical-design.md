@@ -2,6 +2,8 @@
 
 **Last updated:** 2026-06-22
 
+> **Implementation status (2026-08):** This document is the original V1 design. Since then the repo has shipped: CLI `dispatch` / `status` / `followup`; Cursor + Gemini adapters in the registry; a Next.js dashboard with Supabase auth + RLS; Jules source resolution; secure CLI state file modes (`0700`/`0600`); optimized session list polling (skip terminal, concurrency limit, bulk upsert); and Playwright e2e. For current setup and ops, prefer [`README.md`](README.md) and [`web/README.md`](web/README.md). Sections below remain useful for intent and the adapter contract; some roadmap labels (e.g. “V2 web UI”, “Cursor deferred”) are historical.
+
 ---
 
 ## Core Idea
@@ -45,7 +47,7 @@ Two steps, built and verified incrementally (follow-up is V3):
 1. **Dispatch + first handshake** — `polyagent dispatch` starts a session and returns the session ID + first agent response.
 2. **Live status** — `polyagent status` polls real status of the live session, unified across both vendors.
 
-Keys load from `.env.local` (`ANTHROPIC_API_KEY`, `JULES_API_KEY`). See the full task breakdown in `docs/plans/2026-06-23-polyagent-mvp.md`.
+Keys load from `.env.local` (`ANTHROPIC_API_KEY`, `JULES_API_KEY`, plus `CURSOR_API_KEY` / `GEMINI_API_KEY` for the later adapters). See the full task breakdown in [`plans/2026-06-23-polyagent-mvp.md`](plans/2026-06-23-polyagent-mvp.md).
 
 **Target:** working loop on both vendors before _Built in NYC with Vercel_ (2026-06-27).
 
