@@ -2,12 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { hasSupabaseConfig } from "@/lib/supabase/config";
 import { Button } from "@/components/ui/button";
 
 export function UserMenu() {
   const [email, setEmail] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!hasSupabaseConfig()) return;
+
     const supabase = createClient();
     supabase.auth.getClaims().then(({ data }) => {
       const claims = data?.claims as { email?: string } | undefined;
