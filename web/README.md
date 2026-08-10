@@ -1,36 +1,45 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# PolyAgent web dashboard
 
-## Getting Started
+## Local development
 
-First, run the development server:
+Install dependencies, copy `.env.example` to `.env.local`, configure Supabase, and start Next.js:
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The dashboard requires an authenticated Supabase session by default. If the Supabase URL or publishable key is absent, protected pages redirect to `/login`; missing configuration never opens the dashboard implicitly.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+For deliberate local UI work without authentication, set this server-only development flag in `.env.local`:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+POLYAGENT_ALLOW_INSECURE_AUTH_BYPASS=1
+```
 
-## Learn More
+The bypass is accepted only outside `NODE_ENV=production`. Do not set it in deployed environments.
 
-To learn more about Next.js, take a look at the following resources:
+## End-to-end tests
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Install Chromium once, then run the dashboard suite:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npx playwright install chromium
+npm run test:e2e
+```
 
-## Deploy on Vercel
+Playwright starts the Next.js development server on `127.0.0.1:3100` with the explicit local auth bypass. The suite clears the public Supabase settings and mocks dashboard API responses, so it does not use Supabase, OAuth, or Claude/Jules/Cursor/Gemini credentials.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Useful variants:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run test:e2e -- --headed
+npm run test:e2e -- --ui
+```
+
+Other checks:
+
+```bash
+npm run lint
+npm run build
+```
