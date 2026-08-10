@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { mutate } from "swr";
 import { toast } from "sonner";
 import {
@@ -37,6 +37,12 @@ export function NewAgentModal() {
   const [repos, setRepos] = useState<{ repo: string; defaultBranch?: string }[]>([]);
   const [prompt, setPrompt] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const vendorButtonRefs = useRef<Record<VendorKey, HTMLButtonElement | null>>({
+    claude: null,
+    jules: null,
+    cursor: null,
+    gemini: null,
+  });
 
   useEffect(() => {
     if (open && vendor === "jules" && repos.length === 0) {
@@ -108,6 +114,9 @@ export function NewAgentModal() {
                   <button
                     key={v}
                     id={`vendor-${v}`}
+                    ref={(button) => {
+                      vendorButtonRefs.current[v] = button;
+                    }}
                     type="button"
                     role="radio"
                     aria-checked={selected}
@@ -118,13 +127,13 @@ export function NewAgentModal() {
                         e.preventDefault();
                         const next = VENDORS[(VENDORS.indexOf(v) + 1) % VENDORS.length];
                         setVendor(next);
-                        document.getElementById(`vendor-${next}`)?.focus();
+                        vendorButtonRefs.current[next]?.focus();
                       } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
                         e.preventDefault();
                         const prev =
                           VENDORS[(VENDORS.indexOf(v) - 1 + VENDORS.length) % VENDORS.length];
                         setVendor(prev);
-                        document.getElementById(`vendor-${prev}`)?.focus();
+                        vendorButtonRefs.current[prev]?.focus();
                       }
                     }}
                     className={`flex flex-col items-center gap-1.5 rounded-lg border px-2 py-3 transition-all ${
