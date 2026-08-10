@@ -107,10 +107,26 @@ export function NewAgentModal() {
                 return (
                   <button
                     key={v}
+                    id={`vendor-${v}`}
                     type="button"
                     role="radio"
                     aria-checked={selected}
+                    tabIndex={selected ? 0 : -1}
                     onClick={() => setVendor(v)}
+                    onKeyDown={(e) => {
+                      if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+                        e.preventDefault();
+                        const next = VENDORS[(VENDORS.indexOf(v) + 1) % VENDORS.length];
+                        setVendor(next);
+                        document.getElementById(`vendor-${next}`)?.focus();
+                      } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+                        e.preventDefault();
+                        const prev =
+                          VENDORS[(VENDORS.indexOf(v) - 1 + VENDORS.length) % VENDORS.length];
+                        setVendor(prev);
+                        document.getElementById(`vendor-${prev}`)?.focus();
+                      }
+                    }}
                     className={`flex flex-col items-center gap-1.5 rounded-lg border px-2 py-3 transition-all ${
                       selected
                         ? "border-[#D97757] bg-[#D97757]/10 ring-1 ring-[#D97757]/40"
