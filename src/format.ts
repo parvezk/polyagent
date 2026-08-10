@@ -64,8 +64,28 @@ export function renderTable(
   rows: StatusRow[],
   opts: { color?: boolean; tick?: number } = {},
 ): string {
-  const matrix = [COLUMNS.map((c) => c.header), ...rows.map((r) => COLUMNS.map((c) => r[c.key]))];
-  const widths = COLUMNS.map((_, col) => Math.max(...matrix.map((line) => line[col].length)));
+  const numCols = COLUMNS.length;
+  const widths = new Array(numCols).fill(0);
+  const matrix: string[][] = [COLUMNS.map((c) => c.header)];
+
+  // Calculate widths for the header row
+  for (let c = 0; c < numCols; c++) {
+    widths[c] = matrix[0][c].length;
+  }
+
+  // Create matrix and calculate widths in a single pass
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    const line: string[] = new Array(numCols);
+    for (let c = 0; c < numCols; c++) {
+      const val = String(r[COLUMNS[c].key]);
+      line[c] = val;
+      if (val.length > widths[c]) {
+        widths[c] = val.length;
+      }
+    }
+    matrix.push(line);
+  }
 
   return matrix
     .map((line, rowIdx) =>

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { StateStore, STATE_PATH } from "@/lib/core";
-import { currentUserId, toDbRow, upsertSession } from "@/lib/sessions-store";
+import { currentUserId, toDbRow, upsertSessions } from "@/lib/sessions-store";
 
 export const dynamic = "force-dynamic";
 
@@ -15,9 +15,11 @@ export async function POST() {
   let imported = 0;
   try {
     const fileSessions = new StateStore(STATE_PATH).list();
-    for (const s of fileSessions) {
-      await upsertSession(toDbRow(s, userId));
-      imported++;
+    if (fileSessions.length > 0) {
+      const rows = fileSessions.map((s) => toDbRow(s, userId));
+      // TODO: Implement batching for large state files to avoid payload limits
+      await upsertSessions(rows);
+      imported = rows.length;
     }
   } catch {
     // no state file (e.g. on Vercel) — nothing to import

@@ -73,6 +73,48 @@ async function julesRequest(
   return res.json();
 }
 
+/**
+ * Resolves the source for a GitHub repo by looking it up in the list of Jules sources.
+ * A session can only target a repo that is registered as a Jules source (the Jules
+ * GitHub App must be installed AND the repo selected in Jules).
+ */
+async function resolveGithubSource(
+  apiKey: string,
+  repoParam: string,
+  providedBranch: string | undefined,
+): Promise<{ sourceName: string; startingBranch: string | undefined }> {
+  const sourcesResp = (await julesRequest(apiKey, "GET", "/sources")) as {
+    sources?: {
+      name: string;
+      githubRepo?: {
+        owner: string;
+        repo: string;
+        defaultBranch?: { displayName?: string };
+      };
+    }[];
+  };
+  const [owner, repo] = repoParam.toLowerCase().split("/");
+  const sources = sourcesResp.sources ?? [];
+  const found = sources.find(
+    ({ githubRepo }) =>
+      githubRepo?.owner.toLowerCase() === owner &&
+      githubRepo?.repo.toLowerCase() === repo,
+  );
+  if (!found) {
+    const available = sources
+      .map((s) => (s.githubRepo ? `${s.githubRepo.owner}/${s.githubRepo.repo}` : s.name))
+      .join(", ");
+    throw new Error(
+      `Jules has no source for "${repoParam}". Install the Jules GitHub App and select the repo in Jules. Available: ${available || "(none)"}`,
+    );
+  }
+  const sourceName = found.name;
+  // Fall back to the repo's real default branch (varies: main vs master).
+  const startingBranch = providedBranch ?? found.githubRepo?.defaultBranch?.displayName;
+
+  return { sourceName, startingBranch };
+}
+
 export function realJulesPort(apiKey: string): JulesPort {
   return {
     async createSession(i) {
@@ -80,38 +122,9 @@ export function realJulesPort(apiKey: string): JulesPort {
       let startingBranch: string | undefined = i.branch;
 
       if (i.repo) {
-        // Resolve the source for this GitHub repo. A session can only target a
-        // repo that is registered as a Jules source (the Jules GitHub App must
-        // be installed AND the repo selected in Jules). GET /v1alpha/sources
-        // returns { sources: [{ name, githubRepo: { owner, repo, defaultBranch:{displayName} } }] }.
-        const sourcesResp = (await julesRequest(apiKey, "GET", "/sources")) as {
-          sources?: {
-            name: string;
-            githubRepo?: {
-              owner: string;
-              repo: string;
-              defaultBranch?: { displayName?: string };
-            };
-          }[];
-        };
-        const [owner, repo] = i.repo.split("/");
-        const sources = sourcesResp.sources ?? [];
-        const found = sources.find(
-          (s) =>
-            s.githubRepo?.owner.toLowerCase() === owner?.toLowerCase() &&
-            s.githubRepo?.repo.toLowerCase() === repo?.toLowerCase(),
-        );
-        if (!found) {
-          const available = sources
-            .map((s) => (s.githubRepo ? `${s.githubRepo.owner}/${s.githubRepo.repo}` : s.name))
-            .join(", ");
-          throw new Error(
-            `Jules has no source for "${i.repo}". Install the Jules GitHub App and select the repo in Jules. Available: ${available || "(none)"}`,
-          );
-        }
-        sourceName = found.name;
-        // Fall back to the repo's real default branch (varies: main vs master).
-        startingBranch = startingBranch ?? found.githubRepo?.defaultBranch?.displayName;
+        const resolved = await resolveGithubSource(apiKey, i.repo, startingBranch);
+        sourceName = resolved.sourceName;
+        startingBranch = resolved.startingBranch;
       }
 
       const requestBody: Record<string, unknown> = {

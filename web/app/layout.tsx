@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { IBM_Plex_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { UserMenu } from "@/components/user-menu";
+import { PostHogIdentify } from "@/components/posthog-identify";
+import { PostHogPageView } from "@/components/posthog-pageview";
 
 const sans = IBM_Plex_Sans({
   variable: "--font-sans",
@@ -34,6 +37,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           </div>
         </header>
         <main className="mx-auto w-full max-w-[1100px] flex-1 px-6 py-7">{children}</main>
+        <PostHogIdentify />
+        <Suspense fallback={null}>
+          <PostHogPageView />
+        </Suspense>
         <Toaster theme="dark" position="bottom-right" />
       </body>
     </html>
