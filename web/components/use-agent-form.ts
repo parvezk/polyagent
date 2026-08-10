@@ -2,9 +2,8 @@ import { useEffect, useState } from "react";
 import { mutate } from "swr";
 import { toast } from "sonner";
 import { VENDOR_META, type VendorKey } from "@/components/vendor-icon";
+import { CLAUDE_MODELS } from "@/utils/constants";
 
-export const CLAUDE_MODELS = ["claude-opus-4-8", "claude-sonnet-4-6"];
-export const VENDORS: VendorKey[] = ["claude", "jules", "cursor", "gemini"];
 export const repoRequired = (v: VendorKey) => v === "jules" || v === "cursor";
 
 export function useAgentForm() {

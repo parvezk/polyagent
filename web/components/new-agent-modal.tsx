@@ -20,7 +20,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { VendorIcon, VENDOR_META } from "@/components/vendor-icon";
-import { useAgentForm, CLAUDE_MODELS, VENDORS, repoRequired } from "./use-agent-form";
+import { useAgentForm, repoRequired } from "./use-agent-form";
+import { CLAUDE_MODELS, VENDORS } from "@/utils/constants";
 
 export function NewAgentModal() {
   const form = useAgentForm();
