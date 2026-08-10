@@ -22,6 +22,10 @@ import {
   UserIcon,
   ArrowRightIcon,
 } from "lucide-react";
+import {
+  getSessionDrawerRefreshInterval,
+  getSessionDrawerStatus,
+} from "./session-drawer-polling";
 
 interface DrawerProps {
   session: {
@@ -39,6 +43,7 @@ interface DrawerProps {
 export function SessionDrawer({ session, onClose, onFollowupSent }: DrawerProps) {
   const [message, setMessage] = useState("");
   const [sent, setSent] = useState<{ role: "human"; content: string }[]>([]);
+  const [isAwaitingFollowup, setIsAwaitingFollowup] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Track previous session ID to handle resetting state when it changes
@@ -48,7 +53,14 @@ export function SessionDrawer({ session, onClose, onFollowupSent }: DrawerProps)
   const { data, mutate } = useSWR<AgentOutput & { session?: { status: SessionStatus }, summary?: string, firstMessage?: string }>(
     session ? `/api/sessions/${session.id}` : null,
     (url) => fetch(url).then((r) => r.json()),
-    { refreshInterval: session?.status === "running" ? 3000 : 0 },
+    {
+      refreshInterval: (latestData) =>
+        getSessionDrawerRefreshInterval(
+          session?.status,
+          latestData?.session?.status,
+          isAwaitingFollowup,
+        ),
+    },
   );
 
   // Instead of an effect, handle the reset during render if the session changed
@@ -61,6 +73,9 @@ export function SessionDrawer({ session, onClose, onFollowupSent }: DrawerProps)
     if (message !== "") {
       setMessage("");
     }
+    if (isAwaitingFollowup) {
+      setIsAwaitingFollowup(false);
+    }
   }
 
   useEffect(() => {
@@ -68,6 +83,14 @@ export function SessionDrawer({ session, onClose, onFollowupSent }: DrawerProps)
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [data?.messages, sent, data?.firstMessage]);
+
+  useEffect(() => {
+    if (!isAwaitingFollowup) return;
+    const latestStatus = data?.session?.status;
+    if (latestStatus && latestStatus !== "needs_review") {
+      setIsAwaitingFollowup(false);
+    }
+  }, [data?.session?.status, isAwaitingFollowup]);
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -88,7 +111,8 @@ export function SessionDrawer({ session, onClose, onFollowupSent }: DrawerProps)
            throw new Error("Failed to send follow up");
         }
 
-        mutate();
+        setIsAwaitingFollowup(true);
+        void mutate();
         onFollowupSent?.();
       } catch {
         // roll back optimistic UI
@@ -103,7 +127,11 @@ export function SessionDrawer({ session, onClose, onFollowupSent }: DrawerProps)
   if (!session) return null;
 
   // Prefer live status if available
-  const currentStatus = data?.session?.status || session.status;
+  const currentStatus = getSessionDrawerStatus(
+    session.status,
+    data?.session?.status,
+    isAwaitingFollowup,
+  );
   const currentSummary = data?.summary || session.summary;
 
   return (
