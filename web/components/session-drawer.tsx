@@ -60,6 +60,12 @@ export function SessionDrawer({ session, onClose, onFollowupSent }: DrawerProps)
           latestData?.session?.status,
           isAwaitingFollowup,
         ),
+      onSuccess: (latestData) => {
+        const latestStatus = latestData?.session?.status;
+        if (latestStatus && latestStatus !== "needs_review") {
+          setIsAwaitingFollowup(false);
+        }
+      },
     },
   );
 
@@ -83,14 +89,6 @@ export function SessionDrawer({ session, onClose, onFollowupSent }: DrawerProps)
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   }, [data?.messages, sent, data?.firstMessage]);
-
-  useEffect(() => {
-    if (!isAwaitingFollowup) return;
-    const latestStatus = data?.session?.status;
-    if (latestStatus && latestStatus !== "needs_review") {
-      setIsAwaitingFollowup(false);
-    }
-  }, [data?.session?.status, isAwaitingFollowup]);
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
