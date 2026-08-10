@@ -27,7 +27,7 @@ export async function GET() {
         let lastUpdate = s.last_polled ?? s.dispatched_at;
         let summary: string | undefined;
 
-        // Skip polling if the session is already in a terminal state
+        // Skip polling terminal sessions to avoid unnecessary vendor calls and DB writes.
         if (status !== "completed" && status !== "failed") {
           try {
             const live = await buildAdapter(s.vendor).getStatus(s.id);

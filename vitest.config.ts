@@ -1,11 +1,12 @@
+import { resolve } from "node:path";
 import { defineConfig } from "vitest/config";
-import path from "path";
 
 export default defineConfig({
-  test: {
-    include: ["test/**/*.test.ts"],
+  resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./web"),
+      "@": resolve(__dirname, "web"),
+      "next/server": resolve(__dirname, "test/stubs/next-server.ts"),
     },
   },
+  test: { include: ["test/**/*.test.ts"] },
 });
