@@ -31,11 +31,11 @@ export function SessionDrawer({
   // Optimistically-shown follow-ups (server output may not echo them back).
   const [sent, setSent] = useState<string[]>([]);
 
-  // ⚡ BOLT FIX: Track previous session ID to handle state resets during render
-  const [prevSessionId, setPrevSessionId] = useState<string | undefined>(session?.id);
+  const currentSessionId = session?.id ?? null;
+  const [prevSessionId, setPrevSessionId] = useState<string | null>(currentSessionId);
 
-  if (session?.id !== prevSessionId) {
-    setPrevSessionId(session?.id);
+  if (currentSessionId !== prevSessionId) {
+    setPrevSessionId(currentSessionId);
     setSent([]);
     setMessage("");
   }
