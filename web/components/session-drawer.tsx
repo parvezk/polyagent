@@ -22,6 +22,7 @@ import {
   UserIcon,
   ArrowRightIcon,
 } from "lucide-react";
+import { getDraftAfterFailedFollowup } from "./session-drawer-followup";
 
 interface DrawerProps {
   session: {
@@ -93,7 +94,7 @@ export function SessionDrawer({ session, onClose, onFollowupSent }: DrawerProps)
       } catch {
         // roll back optimistic UI
         setSent((prev) => prev.filter(m => m.content !== txt));
-        setMessage(txt); // put message back in the box
+        setMessage((currentDraft) => getDraftAfterFailedFollowup(currentDraft, txt));
         toast.error("Failed to send message");
       }
     },
