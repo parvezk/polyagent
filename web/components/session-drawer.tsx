@@ -23,6 +23,7 @@ import {
   ArrowRightIcon,
 } from "lucide-react";
 import { getDraftAfterFailedFollowup } from "./session-drawer-followup";
+import { shouldRenderFirstMessage } from "./session-drawer-messages";
 
 interface DrawerProps {
   session: {
@@ -106,6 +107,8 @@ export function SessionDrawer({ session, onClose, onFollowupSent }: DrawerProps)
   // Prefer live status if available
   const currentStatus = data?.session?.status || session.status;
   const currentSummary = data?.summary || session.summary;
+  const messages = data?.messages ?? [];
+  const showFirstMessage = shouldRenderFirstMessage(data?.firstMessage, messages);
 
   return (
     <Sheet open={!!session} onOpenChange={(open) => !open && onClose()}>
@@ -152,7 +155,7 @@ export function SessionDrawer({ session, onClose, onFollowupSent }: DrawerProps)
         </div>
 
         <div ref={scrollRef} className="flex-1 overflow-y-auto bg-zinc-950 p-6 space-y-6">
-          {!data?.firstMessage && (!data?.messages || data?.messages.length === 0) && sent.length === 0 ? (
+          {!showFirstMessage && messages.length === 0 && sent.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-zinc-500 space-y-4">
               <div className="h-12 w-12 rounded-full bg-zinc-900 flex items-center justify-center">
                 <CodeIcon className="h-6 w-6 opacity-50" />
@@ -163,7 +166,7 @@ export function SessionDrawer({ session, onClose, onFollowupSent }: DrawerProps)
             </div>
           ) : (
             <>
-              {data?.firstMessage && (
+              {showFirstMessage && data?.firstMessage && (
                 <div className="flex gap-4 group">
                   <div className="flex-shrink-0 mt-1">
                     <div className="h-8 w-8 rounded-full bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
@@ -180,7 +183,7 @@ export function SessionDrawer({ session, onClose, onFollowupSent }: DrawerProps)
                   </div>
                 </div>
               )}
-              {data?.messages?.map((msg, idx) => (
+              {messages.map((msg, idx) => (
                 <div key={idx} className="flex gap-4 group">
                   <div className="flex-shrink-0 mt-1">
                     {msg.role === "agent" ? (
