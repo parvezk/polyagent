@@ -3,19 +3,14 @@
 import useSWR from "swr";
 import { StatusBadge } from "@/components/status-badge";
 import { VendorIcon, VENDOR_META } from "@/components/vendor-icon";
+import { getSessionsRefreshInterval } from "@/lib/session-polling";
 import { relativeTime, type SessionView } from "@/lib/view";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 export function SessionTable({ onSelect }: { onSelect: (s: SessionView) => void }) {
   const { data, isLoading } = useSWR<{ sessions: SessionView[] }>("/api/sessions", fetcher, {
-    refreshInterval: (currentData) => {
-      if (!currentData?.sessions) return 3000;
-      const allTerminal = currentData.sessions.every(
-        (s) => s.status === "completed" || s.status === "failed",
-      );
-      return allTerminal ? 0 : 3000;
-    },
+    refreshInterval: getSessionsRefreshInterval,
   });
 
   const sessions = data?.sessions ?? [];

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/status-badge";
 import { VendorIcon, VENDOR_META } from "@/components/vendor-icon";
+import { getSessionDetailRefreshInterval } from "@/lib/session-polling";
 import { type SessionView } from "@/lib/view";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -39,10 +40,12 @@ export function SessionDrawer({
     setMessage("");
   }
 
-  const isTerminal = session?.status === "completed" || session?.status === "failed";
-
   const { data } = useSWR<DetailResponse>(session ? `/api/sessions/${session.id}` : null, fetcher, {
-    refreshInterval: isTerminal ? 0 : 4000,
+    refreshInterval: (currentData) =>
+      getSessionDetailRefreshInterval({
+        initialStatus: session?.status,
+        refreshedStatus: currentData?.session.status,
+      }),
   });
 
   async function sendFollowup() {
@@ -68,25 +71,26 @@ export function SessionDrawer({
     }
   }
 
+  const currentSession = data?.session ?? session;
   const messages = data?.messages ?? [];
 
   return (
     <Sheet open={!!session} onOpenChange={(o) => !o && onClose()}>
       <SheetContent className="flex w-full flex-col border-l-2 border-l-[#D97757]/40 bg-zinc-950 text-zinc-100 sm:max-w-xl">
-        {session && (
+        {currentSession && (
           <>
             <SheetHeader className="space-y-2">
               <div className="flex items-center gap-3">
                 <span className="flex items-center gap-2 text-sm font-semibold text-zinc-200">
-                  <VendorIcon vendor={session.vendor} className="size-4" />
-                  {VENDOR_META[session.vendor]?.label ?? session.vendor}
+                  <VendorIcon vendor={currentSession.vendor} className="size-4" />
+                  {VENDOR_META[currentSession.vendor]?.label ?? currentSession.vendor}
                 </span>
-                <StatusBadge status={session.status} />
+                <StatusBadge status={currentSession.status} />
               </div>
               <SheetTitle className="text-left text-base font-normal text-zinc-200">
-                {session.label}
+                {currentSession.label}
               </SheetTitle>
-              <p className="font-mono text-[11px] text-zinc-600">{session.id}</p>
+              <p className="font-mono text-[11px] text-zinc-600">{currentSession.id}</p>
             </SheetHeader>
 
             <div className="flex-1 space-y-3 overflow-y-auto px-1 py-4">
