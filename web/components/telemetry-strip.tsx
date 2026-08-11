@@ -1,6 +1,7 @@
 "use client";
 
 import useSWR from "swr";
+import { getSessionsRefreshInterval } from "@/lib/session-polling";
 import type { SessionView } from "@/lib/view";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
@@ -8,7 +9,7 @@ const fetcher = (url: string) => fetch(url).then((r) => r.json());
 export function TelemetryStrip() {
   // Same SWR key as the table → deduped, no extra requests. isValidating drives the live dot.
   const { data, isValidating } = useSWR<{ sessions: SessionView[] }>("/api/sessions", fetcher, {
-    refreshInterval: 3000,
+    refreshInterval: getSessionsRefreshInterval,
   });
   const sessions = data?.sessions ?? [];
   const count = (s: string) => sessions.filter((x) => x.status === s).length;

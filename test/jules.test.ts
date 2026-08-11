@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { JulesAdapter } from "../src/adapters/jules.js";
 import type { JulesPort, JulesState } from "../src/adapters/jules-port.js";
 
@@ -65,5 +65,46 @@ describe("JulesAdapter", () => {
 
     expect(status.status).toBe("unknown");
     expect(status.needsInput).toBe(false);
+  });
+});
+
+describe("JulesAdapter.getOutput", () => {
+  it("requests the session activities and preserves messages with normalized timestamps", async () => {
+    const listActivities = vi.fn().mockResolvedValue({
+      messages: [
+        {
+          role: "human" as const,
+          content: "Please add an edge-case test.",
+          timestamp: "2026-08-06T09:15:00.000Z",
+        },
+        {
+          role: "agent" as const,
+          content: "The regression test is passing.",
+          timestamp: "2026-08-06T09:16:30.000Z",
+        },
+      ],
+    });
+    const adapter = new JulesAdapter(fakePort({ listActivities }));
+
+    const output = await adapter.getOutput("jules_output_1");
+
+    expect(listActivities).toHaveBeenCalledOnce();
+    expect(listActivities).toHaveBeenCalledWith("jules_output_1");
+    expect(output).toEqual({
+      sessionId: "jules_output_1",
+      vendor: "jules",
+      messages: [
+        {
+          role: "human",
+          content: "Please add an edge-case test.",
+          timestamp: new Date("2026-08-06T09:15:00.000Z"),
+        },
+        {
+          role: "agent",
+          content: "The regression test is passing.",
+          timestamp: new Date("2026-08-06T09:16:30.000Z"),
+        },
+      ],
+    });
   });
 });
