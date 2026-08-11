@@ -2,24 +2,7 @@ import type { AgentAdapter } from "./adapter.js";
 import type { AgentSession, AgentStatus, AgentOutput, DispatchRequest } from "../types.js";
 import type { ClaudePort, ClaudeSessionStatus } from "./claude-port.js";
 import { labelFromPrompt, withRepoInstruction } from "../utils/text.js";
-
-// ---------------------------------------------------------------------------
-// Status mapping: Claude → normalized SessionStatus
-// ---------------------------------------------------------------------------
-
-function mapStatus(claudeStatus: ClaudeSessionStatus | string): AgentSession["status"] {
-  switch (claudeStatus) {
-    case "running":
-    case "rescheduling":
-      return "running";
-    case "idle":
-      return "needs_review";
-    case "terminated":
-      return "completed";
-    default:
-      return "unknown";
-  }
-}
+import { normalizeSessionStatus } from "../utils/status.js";
 
 // ---------------------------------------------------------------------------
 // ClaudeAdapter
@@ -42,7 +25,7 @@ export class ClaudeAdapter implements AgentAdapter {
       id: created.sessionId,
       vendor: this.vendor,
       label: labelFromPrompt(req.prompt),
-      status: mapStatus(created.status),
+      status: normalizeSessionStatus(created.status),
       dispatchedAt: new Date().toISOString(),
       outputUrl: req.repo ? `https://github.com/${req.repo}` : undefined,
       firstMessage: created.firstReply || undefined,
@@ -52,7 +35,7 @@ export class ClaudeAdapter implements AgentAdapter {
   async getStatus(sessionId: string): Promise<AgentStatus> {
     try {
       const result = await this.port.getStatus(sessionId);
-      const normalized = mapStatus(result.status);
+      const normalized = normalizeSessionStatus(result.status);
       return {
         status: normalized,
         lastUpdate: new Date(),
