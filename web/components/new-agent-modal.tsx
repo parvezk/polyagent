@@ -162,7 +162,11 @@ export function NewAgentModal() {
             </label>
             {vendor === "jules" ? (
               <Select value={repo} onValueChange={(v) => v && setRepo(v)}>
-                <SelectTrigger id="repo" className="border-zinc-700 bg-zinc-950/50">
+                <SelectTrigger
+                  id="repo"
+                  aria-labelledby="repo-label"
+                  className="border-zinc-700 bg-zinc-950/50"
+                >
                   <SelectValue placeholder="Select a connected repo" />
                 </SelectTrigger>
                 <SelectContent className="border-zinc-700 bg-zinc-900 text-zinc-100">
@@ -180,6 +184,7 @@ export function NewAgentModal() {
                   value={repo}
                   onChange={(e) => setRepo(e.target.value)}
                   placeholder="owner/repo"
+                  aria-label="Repository owner and name"
                   className="col-span-2 border-zinc-700 bg-zinc-950/50"
                 />
                 <Input
@@ -199,7 +204,11 @@ export function NewAgentModal() {
                 Model
               </label>
               <Select value={model} onValueChange={(v) => v && setModel(v)}>
-                <SelectTrigger id="model" className="border-zinc-700 bg-zinc-950/50">
+                <SelectTrigger
+                  id="model"
+                  aria-labelledby="model-label"
+                  className="border-zinc-700 bg-zinc-950/50"
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="border-zinc-700 bg-zinc-900 text-zinc-100">
@@ -222,6 +231,7 @@ export function NewAgentModal() {
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               placeholder="e.g. Identify any security/XSS flaws in the repo"
+              aria-labelledby="task-label"
               className="min-h-24 border-zinc-700 bg-zinc-950/50"
             />
           </div>
