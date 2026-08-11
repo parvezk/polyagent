@@ -43,7 +43,6 @@ function SessionDrawerContent({ session }: { session: SessionView }) {
   const [sending, setSending] = useState(false);
   // Optimistically-shown follow-ups (server output may not echo them back).
   const [sent, setSent] = useState<string[]>([]);
-
   const { data } = useSWR<DetailResponse>(
     `/api/sessions/${session.id}`,
     fetcher,

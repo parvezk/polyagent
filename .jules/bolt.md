@@ -1,3 +1,7 @@
+## 2024-07-24 - Prevent Cascading Re-renders in React
+**Learning:** Using `useEffect` to reset local component state based on a prop change (like a selected `session.id`) triggers a synchronous state update *after* the initial render has committed. This forces a second, immediate re-render of the component tree, degrading performance (cascading renders).
+**Action:** When local state belongs to a selected entity, avoid effect-based prop synchronization. Prefer a keyed child component or a guarded render-phase reset so React does not commit stale state before resetting it.
+
 ## 2026-08-01 - Optimize Synchronous File I/O in Loop
 
 **Learning:** Calling `writeFileSync` inside a loop leads to repeated blocking file I/O operations and performance degradation, particularly evident when updating many sessions sequentially.
