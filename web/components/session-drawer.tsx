@@ -42,9 +42,11 @@ export function SessionDrawer({
     setMessage("");
   }
 
-  const { data } = useSWR<DetailResponse>(session ? `/api/sessions/${session.id}` : null, fetcher, {
-    refreshInterval: 4000,
-  });
+  const { data } = useSWR<DetailResponse>(
+    session ? `/api/sessions/${session.id}` : null,
+    fetcher,
+    { refreshInterval: 4000 },
+  );
 
   async function sendFollowup() {
     if (!session) return;
