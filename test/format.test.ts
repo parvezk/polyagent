@@ -50,7 +50,9 @@ describe("renderTable", () => {
     expect(widths.size).toBe(1);
   });
 
-  it("handles large row counts without overflowing the call stack", () => {
+  it("guards the internal width calculation against argument-spread stack overflows", () => {
+    // Formatter-only stress input: this is not a supported product session count.
+    // It is sized to catch regressions to Math.max(...largeArray) width checks.
     const rows = Array.from({ length: 150_000 }, (_, index) => ({
       vendor: "jules",
       id: index === 149_999 ? "x".repeat(30) : "x",
