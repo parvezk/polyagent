@@ -1,6 +1,5 @@
-import { VendorIcon, VENDOR_META, type VendorKey } from "@/components/vendor-icon";
-
-const VENDORS: VendorKey[] = ["claude", "jules", "cursor", "gemini"];
+import { VendorIcon, VENDOR_META } from "@/components/vendor-icon";
+import { VENDORS } from "@/utils/constants";
 
 // Compact panel between the top bar and the table — what PolyAgent is + which
 // vendors you can orchestrate, visible the moment the site loads.

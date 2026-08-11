@@ -1,36 +1,117 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# PolyAgent web dashboard
 
-## Getting Started
+Next.js App Router UI over the same vendor adapters as the CLI. Sessions are stored in Supabase (RLS-scoped per user). Vendor API keys stay on the server.
 
-First, run the development server:
+## Local development
+
+From the **repo root**, build core once, then set up `web/`:
 
 ```bash
+# repo root
+npm install && npm run build
+
+cd web
+npm install
+cp .env.example .env.local
+npm run sync-core          # copies ../dist → ./_core (required for Vercel self-containment)
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Environment
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | yes (prod/local auth) | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | yes (prod/local auth) | Supabase publishable key |
+| `ANTHROPIC_API_KEY` | for Claude dispatch | Server-only vendor key |
+| `JULES_API_KEY` | for Jules dispatch / sources | Server-only vendor key |
+| `CURSOR_API_KEY` | for Cursor dispatch | Server-only vendor key |
+| `GEMINI_API_KEY` | for Gemini dispatch | Server-only vendor key |
+| `NEXT_PUBLIC_POSTHOG_KEY` / `HOST` | optional | Analytics on `polyagent.pro` / `www.polyagent.pro` only |
+| `POLYAGENT_ALLOW_INSECURE_AUTH_BYPASS` | local only | `1` skips auth gate when `NODE_ENV !== "production"` |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Apply the SQL in `supabase/schema.sql` (and migrations under `supabase/migrations/`) in the Supabase SQL editor before expecting persistence.
 
-## Learn More
+### Auth model
 
-To learn more about Next.js, take a look at the following resources:
+- Page middleware (`proxy.ts` → `lib/supabase/middleware.ts`) refreshes the session and redirects unauthenticated users to `/login`.
+- **`/api/*` is excluded from that middleware** — each route performs its own check.
+- Missing Supabase URL/key **fails closed**: protected pages redirect to `/login`; they never open the dashboard implicitly.
+- For deliberate local UI work without Supabase, set in `.env.local`:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+POLYAGENT_ALLOW_INSECURE_AUTH_BYPASS=1
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Never enable the bypass in deployed environments (ignored / rejected when `NODE_ENV=production`).
 
-## Deploy on Vercel
+Server auth uses `supabase.auth.getClaims()` — do not trust `getSession()` in server code.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## API surface
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+All handlers are `force-dynamic`. Sensitive routes require an authenticated Supabase user (`currentUserId()` → `401` / empty as noted).
+
+| Method | Path | Auth | Body / notes |
+| --- | --- | --- | --- |
+| `GET` | `/api/sessions` | soft | Lists RLS-scoped sessions; live-polls each vendor; unauthenticated → `{ sessions: [] }` |
+| `GET` | `/api/sessions/:id` | RLS | Detail + live status + conversation; `404` if not found / not owned |
+| `POST` | `/api/sessions/:id/followup` | RLS | `{ message }` — `400` if empty; vendor errors → `502` |
+| `POST` | `/api/dispatch` | required | `{ vendor, prompt, repo?, model? }` — Jules requires `repo`; vendor errors → `502` |
+| `POST` | `/api/import` | required | One-shot import of CLI `~/.polyagent/state.json` into the user’s Supabase rows (local convenience; no-op on Vercel) |
+| `GET` | `/api/jules/sources` | **required** | Jules-connected GitHub repos for the dispatch picker; soft-fails to `{ sources: [] }` on vendor errors |
+
+### Jules sources constraint
+
+Jules can only target repos registered as Jules sources (GitHub App installed **and** repo selected in Jules). Resolution happens in the Jules port (`resolveGithubSource`): unmatched `owner/repo` throws with the list of available sources. The web picker loads `/api/jules/sources` so users select a valid repo; unauthenticated callers get `401`.
+
+### Import path
+
+`POST /api/import` reads the CLI state file via `StateStore(STATE_PATH)`, maps rows with `toDbRow`, and **bulk upserts** (`upsertSessions`) to avoid N+1 inserts. Large state files may still hit payload limits (see TODO in route).
+
+### Core bridge (`lib/core.ts`)
+
+Server-only re-exports from vendored `web/_core` (compiled CLI core). After changing `src/`:
+
+```bash
+# repo root
+npm run build
+cd web && npm run sync-core
+```
+
+Never import `@/lib/core` from client components — it pulls vendor SDKs and reads API keys.
+
+## End-to-end tests
+
+Install Chromium once, then run the dashboard suite:
+
+```bash
+npx playwright install chromium
+npm run test:e2e
+```
+
+Playwright starts Next on `127.0.0.1:3100` with the explicit local auth bypass. The suite clears public Supabase settings and mocks dashboard API responses, so it does not use Supabase, OAuth, or vendor credentials.
+
+Useful variants:
+
+```bash
+npm run test:e2e -- --headed
+npm run test:e2e -- --ui
+```
+
+Other checks:
+
+```bash
+npm run lint
+npm run build
+```
+
+## Troubleshooting
+
+| Symptom | Likely cause |
+| --- | --- |
+| Redirect loop / always on `/login` | Missing Supabase env, or no session cookie |
+| Dashboard empty after CLI dispatch | Web uses Supabase, not the JSON file — run **Import** (or `POST /api/import`) while logged in locally |
+| Jules dispatch: “no source for …” | Repo not connected in Jules; check `/api/jules/sources` |
+| `/api/jules/sources` → `401` | Expected when logged out (auth was added deliberately) |
+| Web behaves unlike latest `src/` | Forgot `npm run build` + `npm run sync-core` |
+| Analytics silent locally | Expected — PostHog only tracks production hosts `polyagent.pro` / `www.polyagent.pro` |
