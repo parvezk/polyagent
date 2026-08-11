@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { mkdtempSync } from "node:fs";
+import { chmodSync, mkdtempSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { StateStore } from "../src/state.js";
@@ -7,6 +7,10 @@ import type { AgentSession } from "../src/types.js";
 
 function makeSession(id: string): AgentSession {
   return { id, vendor: "claude", status: "running", dispatchedAt: "2026-06-23T00:00:00Z" };
+}
+
+function mode(path: string): number {
+  return statSync(path).mode & 0o777;
 }
 
 describe("StateStore", () => {
@@ -38,6 +42,28 @@ describe("StateStore", () => {
     const store = new StateStore(join(dir, "missing.json"));
     expect(store.list()).toEqual([]);
     expect(store.get("nope")).toBeUndefined();
+  });
+
+  it("creates state directory and file with private permissions", () => {
+    const stateDir = join(dir, "state");
+    const statePath = join(stateDir, "state.json");
+    const store = new StateStore(statePath);
+
+    store.upsert(makeSession("a"));
+
+    expect(mode(stateDir)).toBe(0o700);
+    expect(mode(statePath)).toBe(0o600);
+  });
+
+  it("tightens permissions on an existing state file", () => {
+    const statePath = join(dir, "state.json");
+    writeFileSync(statePath, JSON.stringify({ sessions: [] }), { mode: 0o644 });
+    chmodSync(statePath, 0o644);
+
+    const store = new StateStore(statePath);
+    store.upsert(makeSession("a"));
+
+    expect(mode(statePath)).toBe(0o600);
   });
 
   it("upsertMany replaces/inserts multiple sessions and saves once", () => {
