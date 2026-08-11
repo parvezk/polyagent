@@ -2,6 +2,8 @@
 
 **Last updated:** 2026-06-22
 
+> **Implementation status (2026-08):** This document is the original V1 design. Since then the repo has shipped: CLI `dispatch` / `status` / `followup`; Cursor + Gemini adapters in the registry; a Next.js dashboard with Supabase auth + RLS; Jules source resolution; and Playwright e2e. For current setup and ops, prefer [`README.md`](README.md) and [`web/README.md`](web/README.md). Sections below remain useful for intent and the adapter contract; some roadmap labels (e.g. “V2 web UI”, “Cursor deferred”) are historical.
+
 ---
 
 ## Core Idea
