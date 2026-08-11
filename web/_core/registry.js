@@ -9,15 +9,15 @@ import { GeminiAdapter } from "./adapters/gemini.js";
 import { realGeminiPort } from "./adapters/gemini-port.js";
 /** Build a live adapter for a vendor, wired to its real port + resolved key. */
 export function buildAdapter(vendor) {
-    const key = resolveKey(vendor);
-    switch (vendor) {
-        case "claude":
-            return new ClaudeAdapter(realClaudePort(key));
-        case "jules":
-            return new JulesAdapter(realJulesPort(key));
-        case "cursor":
-            return new CursorAdapter(realCursorPort(key));
-        case "gemini":
-            return new GeminiAdapter(realGeminiPort(key));
-    }
+  const key = resolveKey(vendor);
+  switch (vendor) {
+    case "claude":
+      return new ClaudeAdapter(realClaudePort(key));
+    case "jules":
+      return new JulesAdapter(realJulesPort(key));
+    case "cursor":
+      return new CursorAdapter(realCursorPort(key));
+    case "gemini":
+      return new GeminiAdapter(realGeminiPort(key));
+  }
 }

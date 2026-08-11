@@ -4,9 +4,9 @@ import pc from "picocolors";
  * reads as a persistent "sticky" header for the duration of the session.
  */
 export function banner(subtitle) {
-    const title = pc.bold(pc.cyan("◆ PolyAgent"));
-    const tag = pc.dim("· vendor-agnostic agent control plane");
-    const line = pc.dim("─".repeat(60));
-    const sub = subtitle ? `\n${pc.dim(subtitle)}` : "";
-    return `${title} ${tag}\n${line}${sub}`;
+  const title = pc.bold(pc.cyan("◆ PolyAgent"));
+  const tag = pc.dim("· vendor-agnostic agent control plane");
+  const line = pc.dim("─".repeat(60));
+  const sub = subtitle ? `\n${pc.dim(subtitle)}` : "";
+  return `${title} ${tag}\n${line}${sub}`;
 }

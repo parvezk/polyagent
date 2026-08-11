@@ -6,7 +6,7 @@
 
 **Architecture:** Vendor-adapter pattern. Each vendor implements a common `AgentAdapter`. Adapters depend on a small injectable **port** (not the SDK/HTTP directly), so normalization logic is unit-testable with fakes; the real port wraps the SDK (Claude) or `fetch` (Jules). A flat JSON file holds dispatched sessions. Keys load from `.env.local`.
 
-**Deliberate split:** one **managed-agent SDK** integration (Claude) + one **raw-API** integration (Jules). This is a learning goal *and* the normalization proof — a repo→PR agent (Jules) and a general-sandbox agent (Claude) normalized behind one interface.
+**Deliberate split:** one **managed-agent SDK** integration (Claude) + one **raw-API** integration (Jules). This is a learning goal _and_ the normalization proof — a repo→PR agent (Jules) and a general-sandbox agent (Claude) normalized behind one interface.
 
 **Tech Stack:** TypeScript (Node 20+, ESM), `commander`, `@anthropic-ai/sdk`, native `fetch` (Jules), `dotenv`, `vitest`, `tsx`.
 
@@ -59,18 +59,19 @@ scripts/ → smoke-claude.ts, smoke-jules.ts   # live verify-gate runners
 These are the stable interfaces the tasks implement. (Implementation bodies + test code are written during execution into the relevant files — not in this plan.)
 
 **`src/types.ts`**
+
 ```typescript
 export type Vendor = "claude" | "jules";
 export type SessionStatus = "running" | "needs_review" | "completed" | "failed" | "unknown";
 
 export interface AgentSession {
-  id: string;            // vendor-native session ID
+  id: string; // vendor-native session ID
   vendor: Vendor;
-  label?: string;        // first line of the prompt, truncated
+  label?: string; // first line of the prompt, truncated
   status: SessionStatus;
-  dispatchedAt: string;  // ISO
-  lastPolled?: string;   // ISO
-  outputUrl?: string;    // PR/branch (Jules) OR session URL (Claude) — generic, NOT assumed to be a PR
+  dispatchedAt: string; // ISO
+  lastPolled?: string; // ISO
+  outputUrl?: string; // PR/branch (Jules) OR session URL (Claude) — generic, NOT assumed to be a PR
 }
 
 export interface AgentStatus {
@@ -88,13 +89,14 @@ export interface AgentOutput {
 
 export interface DispatchRequest {
   prompt: string;
-  repo?: string;    // "owner/repo" — used by Jules
+  repo?: string; // "owner/repo" — used by Jules
   branch?: string;
   model?: string;
 }
 ```
 
 **`src/adapters/adapter.ts`**
+
 ```typescript
 export interface AgentAdapter {
   readonly vendor: Vendor;
@@ -106,41 +108,55 @@ export interface AgentAdapter {
 ```
 
 **Port interfaces** (the SDK/HTTP seam — the only place vendor specifics live):
+
 ```typescript
 // claude-port.ts
 type ClaudeSessionStatus = "idle" | "running" | "rescheduling" | "terminated";
 interface ClaudePort {
   // Hides the agent → environment → session → user.message-event sequence behind one call.
-  createSession(i: { prompt: string; modelId?: string }):
-    Promise<{ sessionId: string; firstReply: string; status: ClaudeSessionStatus }>;
+  createSession(i: {
+    prompt: string;
+    modelId?: string;
+  }): Promise<{ sessionId: string; firstReply: string; status: ClaudeSessionStatus }>;
   getStatus(sessionId: string): Promise<{ status: ClaudeSessionStatus; summary?: string }>;
   sendEvent(sessionId: string, message: string): Promise<void>; // V3
 }
 
 // jules-port.ts
 type JulesState =
-  | "QUEUED" | "PLANNING" | "AWAITING_PLAN_APPROVAL" | "AWAITING_USER_FEEDBACK"
-  | "IN_PROGRESS" | "PAUSED" | "COMPLETED" | "FAILED";
+  | "QUEUED"
+  | "PLANNING"
+  | "AWAITING_PLAN_APPROVAL"
+  | "AWAITING_USER_FEEDBACK"
+  | "IN_PROGRESS"
+  | "PAUSED"
+  | "COMPLETED"
+  | "FAILED";
 interface JulesPort {
   // If repo is set, resolves the source name via GET /v1alpha/sources first, then POST /v1alpha/sessions.
-  createSession(i: { prompt: string; repo?: string; branch?: string; title?: string }):
-    Promise<{ sessionId: string; state: JulesState }>;
+  createSession(i: {
+    prompt: string;
+    repo?: string;
+    branch?: string;
+    title?: string;
+  }): Promise<{ sessionId: string; state: JulesState }>;
   getSession(sessionId: string): Promise<{ state: JulesState; lastMessage?: string }>;
-  listActivities(sessionId: string):
-    Promise<{ messages: { role: "agent" | "human"; content: string; timestamp: string }[] }>;
+  listActivities(
+    sessionId: string,
+  ): Promise<{ messages: { role: "agent" | "human"; content: string; timestamp: string }[] }>;
   sendMessage(sessionId: string, message: string): Promise<void>; // V3 (POST :sendMessage)
 }
 ```
 
 **Status normalization** (the core of the abstraction — each adapter owns its map):
 
-| Normalized | Claude (`ClaudeSessionStatus`) | Jules (`JulesState`) |
-|---|---|---|
-| `running` | `running`, `rescheduling` | `QUEUED`, `PLANNING`, `IN_PROGRESS`, `PAUSED` |
+| Normalized     | Claude (`ClaudeSessionStatus`)     | Jules (`JulesState`)                               |
+| -------------- | ---------------------------------- | -------------------------------------------------- |
+| `running`      | `running`, `rescheduling`          | `QUEUED`, `PLANNING`, `IN_PROGRESS`, `PAUSED`      |
 | `needs_review` | `idle` (turn done, awaiting human) | `AWAITING_PLAN_APPROVAL`, `AWAITING_USER_FEEDBACK` |
-| `completed` | `terminated` | `COMPLETED` |
-| `failed` | — | `FAILED` |
-| `unknown` | error / unrecognized | error / unrecognized |
+| `completed`    | `terminated`                       | `COMPLETED`                                        |
+| `failed`       | —                                  | `FAILED`                                           |
+| `unknown`      | error / unrecognized               | error / unrecognized                               |
 
 > The `idle → needs_review` choice (Claude) is a product decision, refined after observing real behaviour at the live gate. Jules' explicit `AWAITING_*` states map cleanly — this asymmetry is itself good substack material.
 
@@ -151,14 +167,14 @@ interface JulesPort {
 - **Port pattern over direct SDK use** — buys deterministic, key-free unit tests and isolates beta/alpha SDK drift to one file per vendor. Cost: a little boilerplate.
 - **JSON state, not SQLite** — zero setup for the MVP. Upgrade path: `better-sqlite3` → Supabase Postgres when a dashboard/multi-device arrives. The `StateStore` API stays stable across the swap.
 - **Jules = raw `fetch`, not an SDK** — Jules has no official JS SDK; the thin wrapper is intentional (raw-API learning) and marginal effort (one extra `GET /sources` call vs SDK). Behind the same port, so the adapter/tests don't know the difference.
-- **`outputUrl` is generic** — PR/branch for Jules, session URL for Claude. The abstraction leaks here by design; surfacing *where* it leaks is a deliverable insight, not a bug.
+- **`outputUrl` is generic** — PR/branch for Jules, session URL for Claude. The abstraction leaks here by design; surfacing _where_ it leaks is a deliverable insight, not a bug.
 - **No `auth` command** — `.env.local` is the single key mechanism; fewer moving parts for a 3-day build.
 
 ## Testing Strategy
 
 - **Pure logic** (state store, status normalization via each adapter, table formatting) → real `vitest` unit tests with **fake ports**. No keys, deterministic, fast. This is where correctness is proven.
 - **Live vendor behaviour** → per-vendor **smoke scripts** (`scripts/smoke-*.ts`) run manually with real keys. These are the human verify gates between tasks — not CI tests (they cost tokens and need keys).
-- Test files are created during execution; this plan defines *what* each test asserts, not the literal test code.
+- Test files are created during execution; this plan defines _what_ each test asserts, not the literal test code.
 
 ---
 
@@ -166,14 +182,16 @@ interface JulesPort {
 
 Each task ends in an independently testable deliverable. **Execution mode** follows the hybrid rule: isolated modules → subagent; connective/integration layers → inline.
 
-### Task 1 — Scaffold + core types + state store  ·  *inline*
+### Task 1 — Scaffold + core types + state store · _inline_
+
 - **Why inline:** foundational; defines the shared contracts every later task imports.
 - **Files:** `package.json`, `tsconfig.json`, `vitest.config.ts`, `src/types.ts`, `src/state.ts`, `test/state.test.ts`; `git init`.
-- **Produces:** all types in *Contracts*; `StateStore` with `load/save/upsert/get/list`.
+- **Produces:** all types in _Contracts_; `StateStore` with `load/save/upsert/get/list`.
 - **Tests assert:** upsert-then-list ordering; upsert replaces by `id`; state persists across reload.
 - **Verify gate:** `npx vitest run` green. No keys needed.
 
-### Task 2 — Claude adapter (managed-agent SDK)  ·  *subagent*
+### Task 2 — Claude adapter (managed-agent SDK) · _subagent_
+
 - **Why subagent:** isolated module behind `ClaudePort`; fixed contract; no cross-cutting concerns.
 - **Files:** `src/adapters/adapter.ts`, `src/adapters/claude-port.ts`, `src/adapters/claude.ts`, `test/claude.test.ts`.
 - **Consumes:** `types.ts`. **Produces:** `AgentAdapter`, `ClaudePort`, `realClaudePort(apiKey)`, `ClaudeAdapter`.
@@ -181,7 +199,8 @@ Each task ends in an independently testable deliverable. **Execution mode** foll
 - **Tests assert (fake port):** dispatch returns normalized session w/ vendor `claude`; `idle→needs_review`, `terminated→completed`; port error → `unknown` (no throw).
 - **Verify gate:** `npx vitest run test/claude.test.ts` green.
 
-### Task 3 — Jules adapter (raw REST)  ·  *subagent*  (independent of Task 2 — can run in parallel)
+### Task 3 — Jules adapter (raw REST) · _subagent_ (independent of Task 2 — can run in parallel)
+
 - **Why subagent:** isolated module behind `JulesPort`; pure REST wrapper.
 - **Files:** `src/adapters/jules-port.ts`, `src/adapters/jules.ts`, `test/jules.test.ts`.
 - **Consumes:** `types.ts`, `AgentAdapter`. **Produces:** `JulesPort`, `realJulesPort(apiKey)`, `JulesAdapter`.
@@ -189,7 +208,8 @@ Each task ends in an independently testable deliverable. **Execution mode** foll
 - **Tests assert (fake port):** dispatch returns normalized session w/ vendor `jules`; `IN_PROGRESS→running`, `AWAITING_USER_FEEDBACK→needs_review`, `COMPLETED→completed`, `FAILED→failed`; port error → `unknown`.
 - **Verify gate:** `npx vitest run test/jules.test.ts` green.
 
-### Task 4 — Registry + CLI + `dispatch` command  ·  *inline*
+### Task 4 — Registry + CLI + `dispatch` command · _inline_
+
 - **Why inline:** connective layer wiring config + registry + state + both adapters; first live integration.
 - **Files:** `src/config.ts`, `src/registry.ts`, `src/commands/dispatch.ts`, `src/cli.ts`, `scripts/smoke-claude.ts`, `scripts/smoke-jules.ts`. `npm pkg` bin/scripts.
 - **Consumes:** both adapters, `StateStore`. **Produces:** `resolveKey`, `buildAdapter`, `polyagent dispatch --vendor <v> [--repo] [--branch] [--model] "<prompt>"`.
@@ -197,9 +217,10 @@ Each task ends in an independently testable deliverable. **Execution mode** foll
 - **Verify gate (LIVE — needs keys):**
   - `npx tsx scripts/smoke-claude.ts` → Claude session id + first reply, then status polls.
   - `npx tsx scripts/smoke-jules.ts <owner/repo>` → Jules session id, then state polls.
-  - **Human confirms both first-handshakes before Task 5.** Beta/alpha shape fixes go *only* in the port files.
+  - **Human confirms both first-handshakes before Task 5.** Beta/alpha shape fixes go _only_ in the port files.
 
-### Task 5 — Unified `status` command + formatting  ·  *inline*
+### Task 5 — Unified `status` command + formatting · _inline_
+
 - **Why inline:** connective; reads state, polls every session's live adapter, renders one table.
 - **Files:** `src/format.ts`, `src/commands/status.ts`, `test/format.test.ts`; register in `cli.ts`.
 - **Consumes:** `StateStore`, `buildAdapter`. **Produces:** `relativeTime`, `renderTable`, `polyagent status [sessionId]`.
