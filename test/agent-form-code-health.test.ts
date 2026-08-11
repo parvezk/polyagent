@@ -10,4 +10,13 @@ describe("useAgentForm code health", () => {
 
     expect(source).not.toMatch(/["'](?:claude|jules|cursor|gemini)["']/);
   });
+
+  it("does not hardcode vendor-specific source URLs in the hook", () => {
+    const source = readFileSync(
+      new URL("../web/components/use-agent-form.ts", import.meta.url),
+      "utf8",
+    );
+
+    expect(source).not.toContain("/api/jules/sources");
+  });
 });

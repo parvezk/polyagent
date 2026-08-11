@@ -7,7 +7,7 @@ import {
   DEFAULT_VENDOR,
   MODEL_SELECTION_VENDOR,
   REPO_REQUIRED_VENDORS,
-  SOURCE_REPOSITORY_VENDOR,
+  SOURCE_REPOSITORY_CONFIG,
 } from "@/utils/constants";
 
 export const repoRequired = (v: VendorKey) => REPO_REQUIRED_VENDORS.includes(v);
@@ -23,8 +23,8 @@ export function useAgentForm() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (open && vendor === SOURCE_REPOSITORY_VENDOR && repos.length === 0) {
-      fetch("/api/jules/sources")
+    if (open && vendor === SOURCE_REPOSITORY_CONFIG.vendor && repos.length === 0) {
+      fetch(SOURCE_REPOSITORY_CONFIG.endpoint)
         .then((r) => r.json())
         .then((d) => {
           setRepos(d.sources ?? []);

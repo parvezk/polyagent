@@ -12,5 +12,8 @@ export const VENDOR_KEYS = {
 export const VENDORS: VendorKey[] = Object.values(VENDOR_KEYS);
 export const DEFAULT_VENDOR = VENDOR_KEYS.CLAUDE;
 export const MODEL_SELECTION_VENDOR = VENDOR_KEYS.CLAUDE;
-export const SOURCE_REPOSITORY_VENDOR = VENDOR_KEYS.JULES;
+export const SOURCE_REPOSITORY_CONFIG = {
+  vendor: VENDOR_KEYS.JULES,
+  endpoint: "/api/jules/sources",
+} as const satisfies { vendor: VendorKey; endpoint: string };
 export const REPO_REQUIRED_VENDORS: VendorKey[] = [VENDOR_KEYS.JULES, VENDOR_KEYS.CURSOR];
