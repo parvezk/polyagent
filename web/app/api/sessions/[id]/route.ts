@@ -21,9 +21,15 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   if (status !== "completed" && status !== "failed") {
     try {
       const live = await adapter.getStatus(id);
+      const liveLastUpdate = live.lastUpdate.toISOString();
       status = live.status;
       summary = live.summary;
-      await patchSession(id, { status: live.status, last_polled: live.lastUpdate.toISOString() });
+      if (
+        status !== session.status ||
+        liveLastUpdate !== (session.last_polled ?? session.dispatched_at)
+      ) {
+        await patchSession(id, { status, last_polled: liveLastUpdate });
+      }
     } catch {
       /* keep last-known */
     }
