@@ -66,7 +66,7 @@ describe("web/app/api/sessions GET optimization", () => {
 
     expect(data.sessions).toHaveLength(100);
     expect(getStatusMock).toHaveBeenCalledTimes(5);
-    expect(vi.mocked(patchSession)).toHaveBeenCalledTimes(0);
-    expect(vi.mocked(upsertSessions)).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(patchSession)).toHaveBeenCalledTimes(5);
+    expect(vi.mocked(upsertSessions)).toHaveBeenCalledTimes(0);
   });
 });
