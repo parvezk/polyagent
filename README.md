@@ -64,10 +64,13 @@ Design background: [`technical-design.md`](technical-design.md). Historical plan
 
 ## Setup (CLI)
 
+Node.js 20.19+, 22.13+, or 24+ is required for the web test environment.
+
 ```bash
 npm install
-cp .env.example .env.local   # then fill in keys
-npm test                     # unit tests (no keys needed)
+npm --prefix web install
+cp .env.example .env.local   # then fill in your keys
+npm test                     # core and web tests (no keys needed)
 npm run build                # tsc → dist/ (also used by web sync-core)
 ```
 
