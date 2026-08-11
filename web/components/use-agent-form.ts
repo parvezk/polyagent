@@ -2,13 +2,19 @@ import { useEffect, useState } from "react";
 import { mutate } from "swr";
 import { toast } from "sonner";
 import { VENDOR_META, type VendorKey } from "@/components/vendor-icon";
-import { CLAUDE_MODELS } from "@/utils/constants";
+import {
+  CLAUDE_MODELS,
+  DEFAULT_VENDOR,
+  MODEL_SELECTION_VENDOR,
+  REPO_REQUIRED_VENDORS,
+  SOURCE_REPOSITORY_VENDOR,
+} from "@/utils/constants";
 
-export const repoRequired = (v: VendorKey) => v === "jules" || v === "cursor";
+export const repoRequired = (v: VendorKey) => REPO_REQUIRED_VENDORS.includes(v);
 
 export function useAgentForm() {
   const [open, setOpen] = useState(false);
-  const [vendor, setVendor] = useState<VendorKey>("claude");
+  const [vendor, setVendor] = useState<VendorKey>(DEFAULT_VENDOR);
   const [model, setModel] = useState(CLAUDE_MODELS[0]);
   const [repo, setRepo] = useState("");
   const [branch, setBranch] = useState("");
@@ -17,7 +23,7 @@ export function useAgentForm() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (open && vendor === "jules" && repos.length === 0) {
+    if (open && vendor === SOURCE_REPOSITORY_VENDOR && repos.length === 0) {
       fetch("/api/jules/sources")
         .then((r) => r.json())
         .then((d) => {
@@ -39,7 +45,7 @@ export function useAgentForm() {
           prompt,
           repo: repo || undefined,
           branch: branch || undefined,
-          model: vendor === "claude" ? model : undefined,
+          model: vendor === MODEL_SELECTION_VENDOR ? model : undefined,
         }),
       });
       const data = await res.json();
