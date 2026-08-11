@@ -2,24 +2,7 @@ import type { AgentAdapter } from "./adapter.js";
 import type { AgentSession, AgentStatus, AgentOutput, DispatchRequest } from "../types.js";
 import type { CursorPort, CursorRunStatus } from "./cursor-port.js";
 import { labelFromPrompt } from "../utils/text.js";
-
-// ---------------------------------------------------------------------------
-// Status mapping: Cursor run status → normalized SessionStatus
-// ---------------------------------------------------------------------------
-
-function mapStatus(status: CursorRunStatus | string): AgentSession["status"] {
-  switch (status) {
-    case "running":
-      return "running";
-    case "finished":
-      return "completed";
-    case "error":
-    case "cancelled":
-      return "failed";
-    default:
-      return "unknown";
-  }
-}
+import { normalizeSessionStatus } from "../utils/status.js";
 
 // ---------------------------------------------------------------------------
 // CursorAdapter
@@ -42,7 +25,7 @@ export class CursorAdapter implements AgentAdapter {
       id: created.agentId,
       vendor: this.vendor as AgentSession["vendor"],
       label: labelFromPrompt(req.prompt),
-      status: mapStatus(created.status),
+      status: normalizeSessionStatus(created.status),
       dispatchedAt: new Date().toISOString(),
       outputUrl: created.prUrl || undefined,
     };
@@ -52,7 +35,7 @@ export class CursorAdapter implements AgentAdapter {
     try {
       const result = await this.port.getLatestRunStatus(sessionId);
       return {
-        status: mapStatus(result.status),
+        status: normalizeSessionStatus(result.status),
         lastUpdate: new Date(),
         summary: result.summary,
         needsInput: false,
