@@ -41,6 +41,17 @@ export class StateStore {
     this.save();
   }
 
+  upsertMany(sessions: AgentSession[]): void {
+    for (const session of sessions) {
+      const i = this.sessions.findIndex((s) => s.id === session.id);
+      if (i >= 0) this.sessions[i] = session;
+      else this.sessions.push(session);
+    }
+    if (sessions.length > 0) {
+      this.save();
+    }
+  }
+
   list(): AgentSession[] {
     return [...this.sessions];
   }
