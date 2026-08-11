@@ -7,7 +7,7 @@
     "doc": "docs"
   },
   "scripts": {
-    "test": "vitest run",
+    "test": "vitest run && npm --prefix web test",
     "build": "tsc",
     "dev": "tsx src/cli.ts",
     "format": "prettier --write .",
