@@ -30,6 +30,21 @@ describe("StateStore", () => {
     expect(reloaded.list().map((s) => s.id)).toEqual(["a", "b"]);
   });
 
+  it.skipIf(process.platform === "win32")("creates private state storage", () => {
+    const stateDir = join(dir, ".polyagent");
+    const path = join(stateDir, "state.json");
+    const previousUmask = process.umask(0);
+
+    try {
+      new StateStore(path).upsert(makeSession("private"));
+    } finally {
+      process.umask(previousUmask);
+    }
+
+    expect(statSync(stateDir).mode & 0o777).toBe(0o700);
+    expect(statSync(path).mode & 0o777).toBe(0o600);
+  });
+
   it("upsert replaces an existing session by id", () => {
     const store = new StateStore(join(dir, "state.json"));
     store.upsert(makeSession("a"));
