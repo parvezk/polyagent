@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { mutate } from "swr";
 import { toast } from "sonner";
 import {
@@ -37,6 +37,12 @@ export function NewAgentModal() {
   const [repos, setRepos] = useState<{ repo: string; defaultBranch?: string }[]>([]);
   const [prompt, setPrompt] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const vendorButtonRefs = useRef<Record<VendorKey, HTMLButtonElement | null>>({
+    claude: null,
+    jules: null,
+    cursor: null,
+    gemini: null,
+  });
 
   useEffect(() => {
     if (open && vendor === "jules" && repos.length === 0) {
@@ -94,15 +100,42 @@ export function NewAgentModal() {
         <div className="space-y-4 py-2">
           {/* Vendor — icon radio tiles */}
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-zinc-400">Vendor</label>
-            <div className="grid grid-cols-4 gap-2">
+            <label id="vendor-label" className="text-xs font-medium text-zinc-400">
+              Vendor
+            </label>
+            <div
+              className="grid grid-cols-4 gap-2"
+              role="radiogroup"
+              aria-labelledby="vendor-label"
+            >
               {VENDORS.map((v) => {
                 const selected = v === vendor;
                 return (
                   <button
                     key={v}
+                    id={`vendor-${v}`}
+                    ref={(button) => {
+                      vendorButtonRefs.current[v] = button;
+                    }}
                     type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    tabIndex={selected ? 0 : -1}
                     onClick={() => setVendor(v)}
+                    onKeyDown={(e) => {
+                      if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+                        e.preventDefault();
+                        const next = VENDORS[(VENDORS.indexOf(v) + 1) % VENDORS.length];
+                        setVendor(next);
+                        vendorButtonRefs.current[next]?.focus();
+                      } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+                        e.preventDefault();
+                        const prev =
+                          VENDORS[(VENDORS.indexOf(v) - 1 + VENDORS.length) % VENDORS.length];
+                        setVendor(prev);
+                        vendorButtonRefs.current[prev]?.focus();
+                      }
+                    }}
                     className={`flex flex-col items-center gap-1.5 rounded-lg border px-2 py-3 transition-all ${
                       selected
                         ? "border-[#D97757] bg-[#D97757]/10 ring-1 ring-[#D97757]/40"
@@ -124,12 +157,16 @@ export function NewAgentModal() {
 
           {/* Repo (+ branch) */}
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-zinc-400">
+            <label htmlFor="repo" id="repo-label" className="text-xs font-medium text-zinc-400">
               Repo {repoRequired(vendor) ? "" : <span className="text-zinc-600">(optional)</span>}
             </label>
             {vendor === "jules" ? (
               <Select value={repo} onValueChange={(v) => v && setRepo(v)}>
-                <SelectTrigger className="border-zinc-700 bg-zinc-950/50">
+                <SelectTrigger
+                  id="repo"
+                  aria-labelledby="repo-label"
+                  className="border-zinc-700 bg-zinc-950/50"
+                >
                   <SelectValue placeholder="Select a connected repo" />
                 </SelectTrigger>
                 <SelectContent className="border-zinc-700 bg-zinc-900 text-zinc-100">
@@ -143,15 +180,18 @@ export function NewAgentModal() {
             ) : (
               <div className="grid grid-cols-3 gap-2">
                 <Input
+                  id="repo"
                   value={repo}
                   onChange={(e) => setRepo(e.target.value)}
                   placeholder="owner/repo"
+                  aria-label="Repository owner and name"
                   className="col-span-2 border-zinc-700 bg-zinc-950/50"
                 />
                 <Input
                   value={branch}
                   onChange={(e) => setBranch(e.target.value)}
                   placeholder="branch (optional)"
+                  aria-label="Branch (optional)"
                   className="border-zinc-700 bg-zinc-950/50"
                 />
               </div>
@@ -160,9 +200,15 @@ export function NewAgentModal() {
 
           {vendor === "claude" && (
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-zinc-400">Model</label>
+              <label htmlFor="model" id="model-label" className="text-xs font-medium text-zinc-400">
+                Model
+              </label>
               <Select value={model} onValueChange={(v) => v && setModel(v)}>
-                <SelectTrigger className="border-zinc-700 bg-zinc-950/50">
+                <SelectTrigger
+                  id="model"
+                  aria-labelledby="model-label"
+                  className="border-zinc-700 bg-zinc-950/50"
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="border-zinc-700 bg-zinc-900 text-zinc-100">
@@ -177,11 +223,15 @@ export function NewAgentModal() {
           )}
 
           <div className="space-y-1.5">
-            <label className="text-xs font-medium text-zinc-400">Task</label>
+            <label htmlFor="task" id="task-label" className="text-xs font-medium text-zinc-400">
+              Task
+            </label>
             <Textarea
+              id="task"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               placeholder="e.g. Identify any security/XSS flaws in the repo"
+              aria-labelledby="task-label"
               className="min-h-24 border-zinc-700 bg-zinc-950/50"
             />
           </div>

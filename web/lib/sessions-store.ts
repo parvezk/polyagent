@@ -60,17 +60,17 @@ export async function upsertSession(row: DbSession): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
-export async function upsertSessions(rows: DbSession[]): Promise<void> {
-  if (rows.length === 0) return;
-  const supabase = await createClient();
-  const { error } = await supabase.from("sessions").upsert(rows);
-  if (error) throw new Error(error.message);
-}
-
 export async function patchSession(
   id: string,
   patch: Partial<Pick<DbSession, "status" | "last_polled">>,
 ): Promise<void> {
   const supabase = await createClient();
   await supabase.from("sessions").update(patch).eq("id", id);
+}
+
+export async function upsertSessions(rows: DbSession[]): Promise<void> {
+  if (!rows || rows.length === 0) return;
+  const supabase = await createClient();
+  const { error } = await supabase.from("sessions").upsert(rows);
+  if (error) throw new Error(error.message);
 }
