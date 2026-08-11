@@ -127,3 +127,67 @@ describe("realJulesPort.createSession", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("realJulesPort.getSession", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("requests the session and preserves its explicit last message", async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValueOnce(
+      jsonResponse({
+        state: "AWAITING_USER_FEEDBACK",
+        lastMessage: "Which database should I use?",
+        messages: [{ role: "agent", content: "Older message" }],
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await realJulesPort("test-api-key").getSession("session-123");
+
+    expect(result).toEqual({
+      state: "AWAITING_USER_FEEDBACK",
+      lastMessage: "Which database should I use?",
+    });
+    expect(fetchMock).toHaveBeenCalledWith(`${JULES_API_BASE}/sessions/session-123`, {
+      method: "GET",
+      headers: {
+        "X-Goog-Api-Key": "test-api-key",
+        "Content-Type": "application/json",
+      },
+    });
+  });
+
+  it("falls back to the last agent message", async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValueOnce(
+      jsonResponse({
+        state: "IN_PROGRESS",
+        messages: [
+          { role: "agent", content: "First update" },
+          { role: "human", content: "Please continue" },
+          { role: "agent", content: "Latest agent update" },
+          { role: "human", content: "Thanks" },
+        ],
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await realJulesPort("test-api-key").getSession("session-456");
+
+    expect(result).toEqual({
+      state: "IN_PROGRESS",
+      lastMessage: "Latest agent update",
+    });
+  });
+
+  it("defaults sessions without state or messages to queued", async () => {
+    vi.stubGlobal("fetch", vi.fn<typeof fetch>().mockResolvedValueOnce(jsonResponse({})));
+
+    const result = await realJulesPort("test-api-key").getSession("session-789");
+
+    expect(result).toEqual({
+      state: "QUEUED",
+      lastMessage: undefined,
+    });
+  });
+});
