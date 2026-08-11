@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync, chmodSync } from "node:fs";
 import { dirname } from "node:path";
 import type { AgentSession } from "./types.js";
 
@@ -23,9 +23,15 @@ export class StateStore {
   }
 
   save(): void {
-    mkdirSync(dirname(this.path), { recursive: true, mode: 0o700 });
+    const dir = dirname(this.path);
+    mkdirSync(dir, { recursive: true, mode: 0o700 });
     const data: StateFile = { sessions: this.sessions };
     writeFileSync(this.path, JSON.stringify(data, null, 2), { mode: 0o600 });
+    try {
+      chmodSync(this.path, 0o600);
+    } catch {
+      /* ignore if we don't own it */
+    }
   }
 
   upsert(session: AgentSession): void {
