@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import useSWR, { mutate } from "swr";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -8,7 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/status-badge";
 import { VendorIcon, VENDOR_META } from "@/components/vendor-icon";
+import { getSessionDetailRefreshInterval } from "@/lib/session-polling";
 import { type SessionView } from "@/lib/view";
+import { getDraftAfterFailedFollowup } from "./session-drawer-followup";
+import { shouldRenderFirstMessage } from "./session-drawer-messages";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -26,103 +29,118 @@ export function SessionDrawer({
   session: SessionView | null;
   onClose: () => void;
 }) {
+  return (
+    <Sheet open={!!session} onOpenChange={(o) => !o && onClose()}>
+      <SheetContent className="flex w-full flex-col border-l-2 border-l-[#D97757]/40 bg-zinc-950 text-zinc-100 sm:max-w-xl">
+        {session && <SessionDrawerContent key={session.id} session={session} />}
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+function SessionDrawerContent({ session }: { session: SessionView }) {
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   // Optimistically-shown follow-ups (server output may not echo them back).
   const [sent, setSent] = useState<string[]>([]);
-
-  // Reset optimistic messages when switching sessions.
-  useEffect(() => {
-    setSent([]);
-    setMessage("");
-  }, [session?.id]);
-
   const { data } = useSWR<DetailResponse>(
-    session ? `/api/sessions/${session.id}` : null,
+    `/api/sessions/${session.id}`,
     fetcher,
-    { refreshInterval: 4000 },
+    {
+      refreshInterval: (currentData) =>
+        getSessionDetailRefreshInterval({
+          initialStatus: session?.status,
+          refreshedStatus: currentData?.session.status,
+        }),
+    },
   );
 
   async function sendFollowup() {
-    if (!session) return;
+    const submittedMessage = message;
+    setMessage("");
     setSending(true);
     try {
       const res = await fetch(`/api/sessions/${session.id}/followup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message }),
+        body: JSON.stringify({ message: submittedMessage }),
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error ?? "Follow-up failed");
       toast.success("Follow-up sent");
-      setSent((prev) => [...prev, message]); // optimistic — show it immediately
-      setMessage("");
+      setSent((prev) => [...prev, submittedMessage]);
       mutate(`/api/sessions/${session.id}`);
       mutate("/api/sessions");
     } catch (err) {
+      setMessage((currentDraft) => getDraftAfterFailedFollowup(currentDraft, submittedMessage));
       toast.error(err instanceof Error ? err.message : "Follow-up failed");
     } finally {
       setSending(false);
     }
   }
 
+  const currentSession = data?.session ?? session;
   const messages = data?.messages ?? [];
+  const showFirstMessage = shouldRenderFirstMessage(data?.firstMessage, messages);
 
   return (
-    <Sheet open={!!session} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent className="flex w-full flex-col border-l-2 border-l-[#D97757]/40 bg-zinc-950 text-zinc-100 sm:max-w-xl">
-        {session && (
-          <>
-            <SheetHeader className="space-y-2">
-              <div className="flex items-center gap-3">
-                <span className="flex items-center gap-2 text-sm font-semibold text-zinc-200">
-                  <VendorIcon vendor={session.vendor} className="size-4" />
-                  {VENDOR_META[session.vendor]?.label ?? session.vendor}
-                </span>
-                <StatusBadge status={session.status} />
-              </div>
-              <SheetTitle className="text-left text-base font-normal text-zinc-200">
-                {session.label}
-              </SheetTitle>
-              <p className="font-mono text-[11px] text-zinc-600">{session.id}</p>
-            </SheetHeader>
+    <>
+      <SheetHeader className="space-y-2">
+        <div className="flex items-center gap-3">
+          <span className="flex items-center gap-2 text-sm font-semibold text-zinc-200">
+            <VendorIcon vendor={currentSession.vendor} className="size-4" />
+            {VENDOR_META[currentSession.vendor]?.label ?? currentSession.vendor}
+          </span>
+          <StatusBadge status={currentSession.status} />
+        </div>
+        <SheetTitle className="text-left text-base font-normal text-zinc-200">
+          {currentSession.label}
+        </SheetTitle>
+        <p className="font-mono text-[11px] text-zinc-600">{currentSession.id}</p>
+      </SheetHeader>
 
-            <div className="flex-1 space-y-3 overflow-y-auto px-1 py-4">
-              {data?.firstMessage && (
-                <Message role="agent" content={data.firstMessage} />
-              )}
-              {messages.map((m, i) => (
-                <Message key={i} role={m.role} content={m.content} />
-              ))}
-              {sent.map((m, i) => (
-                <Message key={`sent-${i}`} role="human" content={m} />
-              ))}
-              {!data?.firstMessage && messages.length === 0 && sent.length === 0 && (
-                <p className="py-8 text-center text-xs text-zinc-600">
-                  No output yet — the agent is working.
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-2 border-t border-zinc-800 pt-4">
-              <Textarea
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder="Send a follow-up to steer the agent…"
-                className="min-h-20 border-zinc-800 bg-zinc-900"
-              />
-              <Button
-                onClick={sendFollowup}
-                disabled={sending || !message.trim()}
-                className="w-full bg-[#D97757] text-zinc-950 hover:bg-[#c8694a]"
-              >
-                {sending ? "Sending…" : "Send follow-up"}
-              </Button>
-            </div>
-          </>
+      <div className="flex-1 space-y-3 overflow-y-auto px-1 py-4">
+        {showFirstMessage && data?.firstMessage && (
+          <Message role="agent" content={data.firstMessage} />
         )}
-      </SheetContent>
-    </Sheet>
+        {messages.map((m, i) => (
+          <Message key={i} role={m.role} content={m.content} />
+        ))}
+        {sent.map((m, i) => (
+          <Message key={`sent-${i}`} role="human" content={m} />
+        ))}
+        {!showFirstMessage && messages.length === 0 && sent.length === 0 && (
+          <p className="py-8 text-center text-xs text-zinc-600">
+            No output yet — the agent is working.
+          </p>
+        )}
+      </div>
+
+      <div className="space-y-2 border-t border-zinc-800 pt-4">
+        <Textarea
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              if (!sending && message.trim()) {
+                sendFollowup();
+              }
+            }
+          }}
+          placeholder="Send a follow-up to steer the agent… (Press Enter to send)"
+          aria-label="Follow-up message"
+          className="min-h-20 border-zinc-800 bg-zinc-900"
+        />
+        <Button
+          onClick={sendFollowup}
+          disabled={sending || !message.trim()}
+          className="w-full bg-[#D97757] text-zinc-950 hover:bg-[#c8694a]"
+        >
+          {sending ? "Sending…" : "Send follow-up"}
+        </Button>
+      </div>
+    </>
   );
 }
 

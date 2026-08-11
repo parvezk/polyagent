@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { GeminiAdapter } from "../src/adapters/gemini.js";
 import type { GeminiPort, GeminiInteractionStatus } from "../src/adapters/gemini-port.js";
 
@@ -23,6 +23,25 @@ describe("GeminiAdapter", () => {
     expect(session.id).toBe("gemini_1");
     expect(session.status).toBe("running");
     expect(session.label).toBe("Fix the bug");
+  });
+
+  it("passes a repo to Gemini as an exact clone-first instruction without inventing a branch", async () => {
+    const createInteraction = vi.fn().mockResolvedValue({
+      interactionId: "gemini_1",
+      status: "in_progress" as GeminiInteractionStatus,
+    });
+    const adapter = new GeminiAdapter(fakePort({ createInteraction }));
+
+    await adapter.dispatch({
+      prompt: "Audit payment validation",
+      repo: "acme/payments",
+    });
+
+    expect(createInteraction).toHaveBeenCalledWith({
+      prompt:
+        "Work in the GitHub repository https://github.com/acme/payments — clone it first, then complete this task:\n\nAudit payment validation",
+      modelId: undefined,
+    });
   });
 
   it("getStatus maps completed to completed", async () => {

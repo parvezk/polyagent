@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const fakes = vi.hoisted(() => ({
   buildAdapter: vi.fn(),
   getSession: vi.fn(),
+  patchSession: vi.fn(),
   sendFollowup: vi.fn(),
 }));
 
@@ -12,9 +13,10 @@ vi.mock("@/lib/core", () => ({
 
 vi.mock("@/lib/sessions-store", () => ({
   getSession: fakes.getSession,
+  patchSession: fakes.patchSession,
 }));
 
-import { POST } from "../web/app/api/sessions/[id]/followup/route.js";
+import { POST } from "../web/app/api/sessions/[id]/followup/route";
 
 const session = {
   id: "session-1",
@@ -58,6 +60,7 @@ describe("POST /api/sessions/[id]/followup", () => {
     await expect(response.json()).resolves.toEqual({ error: "message is required" });
     expect(fakes.getSession).not.toHaveBeenCalled();
     expect(fakes.buildAdapter).not.toHaveBeenCalled();
+    expect(fakes.patchSession).not.toHaveBeenCalled();
   });
 
   it.each([undefined, "", "   ", "\n\t"])(
@@ -69,6 +72,7 @@ describe("POST /api/sessions/[id]/followup", () => {
       await expect(response.json()).resolves.toEqual({ error: "message is required" });
       expect(fakes.getSession).not.toHaveBeenCalled();
       expect(fakes.buildAdapter).not.toHaveBeenCalled();
+      expect(fakes.patchSession).not.toHaveBeenCalled();
     },
   );
 
@@ -79,6 +83,7 @@ describe("POST /api/sessions/[id]/followup", () => {
 
     expect(fakes.getSession).toHaveBeenCalledWith("missing-session");
     expect(fakes.buildAdapter).not.toHaveBeenCalled();
+    expect(fakes.patchSession).not.toHaveBeenCalled();
     expect(response.status).toBe(404);
     await expect(response.json()).resolves.toEqual({ error: "Session not found" });
   });
@@ -92,8 +97,41 @@ describe("POST /api/sessions/[id]/followup", () => {
     expect(fakes.buildAdapter).toHaveBeenCalledWith("gemini");
     expect(fakes.sendFollowup).toHaveBeenCalledWith("session-1", message);
     expect(fakes.sendFollowup).toHaveBeenCalledTimes(1);
+    expect(fakes.patchSession).toHaveBeenCalledWith("session-1", {
+      status: "running",
+      last_polled: expect.any(String),
+    });
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ ok: true });
+  });
+
+  it("marks completed sessions running after accepting a follow-up", async () => {
+    fakes.getSession.mockResolvedValue({
+      ...session,
+      id: "sess_1",
+      user_id: "user_1",
+      vendor: "claude",
+      label: "Done before",
+      status: "completed",
+      last_polled: "2026-08-10T00:01:00.000Z",
+    });
+
+    const response = await POST(
+      new Request("https://polyagent.test/api/sessions/sess_1/followup", {
+        method: "POST",
+        body: JSON.stringify({ message: "Please continue" }),
+      }),
+      { params: Promise.resolve({ id: "sess_1" }) },
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ ok: true });
+    expect(fakes.buildAdapter).toHaveBeenCalledWith("claude");
+    expect(fakes.sendFollowup).toHaveBeenCalledWith("sess_1", "Please continue");
+    expect(fakes.patchSession).toHaveBeenCalledWith("sess_1", {
+      status: "running",
+      last_polled: expect.any(String),
+    });
   });
 
   it("reports a vendor failure without returning success", async () => {
@@ -102,6 +140,8 @@ describe("POST /api/sessions/[id]/followup", () => {
     const response = await POST(jsonRequest({ message: "Continue" }), context());
 
     expect(fakes.sendFollowup).toHaveBeenCalledWith("session-1", "Continue");
+    expect(fakes.patchSession).not.toHaveBeenCalled();
     expect(response.status).toBe(502);
+    await expect(response.json()).resolves.toEqual({ error: "Vendor unavailable" });
   });
 });
