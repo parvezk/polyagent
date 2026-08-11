@@ -10,6 +10,8 @@ import { StatusBadge } from "@/components/status-badge";
 import { VendorIcon, VENDOR_META } from "@/components/vendor-icon";
 import { getSessionDetailRefreshInterval } from "@/lib/session-polling";
 import { type SessionView } from "@/lib/view";
+import { getDraftAfterFailedFollowup } from "./session-drawer-followup";
+import { shouldRenderFirstMessage } from "./session-drawer-messages";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
@@ -31,40 +33,47 @@ export function SessionDrawer({
   const [sending, setSending] = useState(false);
   // Optimistically-shown follow-ups (server output may not echo them back).
   const [sent, setSent] = useState<string[]>([]);
-  const [prevSessionId, setPrevSessionId] = useState<string | undefined>(undefined);
 
-  // Reset optimistic messages when switching sessions.
-  if (session?.id !== prevSessionId) {
-    setPrevSessionId(session?.id);
+  const currentSessionId = session?.id ?? null;
+  const [prevSessionId, setPrevSessionId] = useState<string | null>(currentSessionId);
+
+  if (currentSessionId !== prevSessionId) {
+    setPrevSessionId(currentSessionId);
     setSent([]);
     setMessage("");
   }
 
-  const { data } = useSWR<DetailResponse>(session ? `/api/sessions/${session.id}` : null, fetcher, {
-    refreshInterval: (currentData) =>
-      getSessionDetailRefreshInterval({
-        initialStatus: session?.status,
-        refreshedStatus: currentData?.session.status,
-      }),
-  });
+  const { data } = useSWR<DetailResponse>(
+    session ? `/api/sessions/${session.id}` : null,
+    fetcher,
+    {
+      refreshInterval: (currentData) =>
+        getSessionDetailRefreshInterval({
+          initialStatus: session?.status,
+          refreshedStatus: currentData?.session.status,
+        }),
+    },
+  );
 
   async function sendFollowup() {
     if (!session) return;
+    const submittedMessage = message;
+    setMessage("");
     setSending(true);
     try {
       const res = await fetch(`/api/sessions/${session.id}/followup`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message }),
+        body: JSON.stringify({ message: submittedMessage }),
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error ?? "Follow-up failed");
       toast.success("Follow-up sent");
-      setSent((prev) => [...prev, message]); // optimistic — show it immediately
-      setMessage("");
+      setSent((prev) => [...prev, submittedMessage]);
       mutate(`/api/sessions/${session.id}`);
       mutate("/api/sessions");
     } catch (err) {
+      setMessage((currentDraft) => getDraftAfterFailedFollowup(currentDraft, submittedMessage));
       toast.error(err instanceof Error ? err.message : "Follow-up failed");
     } finally {
       setSending(false);
@@ -73,6 +82,7 @@ export function SessionDrawer({
 
   const currentSession = data?.session ?? session;
   const messages = data?.messages ?? [];
+  const showFirstMessage = shouldRenderFirstMessage(data?.firstMessage, messages);
 
   return (
     <Sheet open={!!session} onOpenChange={(o) => !o && onClose()}>
@@ -94,14 +104,16 @@ export function SessionDrawer({
             </SheetHeader>
 
             <div className="flex-1 space-y-3 overflow-y-auto px-1 py-4">
-              {data?.firstMessage && <Message role="agent" content={data.firstMessage} />}
+              {showFirstMessage && data?.firstMessage && (
+                <Message role="agent" content={data.firstMessage} />
+              )}
               {messages.map((m, i) => (
                 <Message key={i} role={m.role} content={m.content} />
               ))}
               {sent.map((m, i) => (
                 <Message key={`sent-${i}`} role="human" content={m} />
               ))}
-              {!data?.firstMessage && messages.length === 0 && sent.length === 0 && (
+              {!showFirstMessage && messages.length === 0 && sent.length === 0 && (
                 <p className="py-8 text-center text-xs text-zinc-600">
                   No output yet — the agent is working.
                 </p>

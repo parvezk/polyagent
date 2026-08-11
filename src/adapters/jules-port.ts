@@ -97,8 +97,7 @@ async function resolveGithubSource(
   const sources = sourcesResp.sources ?? [];
   const found = sources.find(
     ({ githubRepo }) =>
-      githubRepo?.owner.toLowerCase() === owner &&
-      githubRepo?.repo.toLowerCase() === repo,
+      githubRepo?.owner.toLowerCase() === owner && githubRepo?.repo.toLowerCase() === repo,
   );
   if (!found) {
     const available = sources
@@ -115,109 +114,117 @@ async function resolveGithubSource(
   return { sourceName, startingBranch };
 }
 
-export function realJulesPort(apiKey: string): JulesPort {
-  return {
-    async createSession(i) {
-      let sourceName: string | undefined;
-      let startingBranch: string | undefined = i.branch;
+class RealJulesPortImpl implements JulesPort {
+  constructor(private apiKey: string) {}
 
-      if (i.repo) {
-        const resolved = await resolveGithubSource(apiKey, i.repo, startingBranch);
-        sourceName = resolved.sourceName;
-        startingBranch = resolved.startingBranch;
-      }
+  async createSession(i: {
+    prompt: string;
+    repo?: string;
+    branch?: string;
+    title?: string;
+  }): Promise<{ sessionId: string; state: JulesState }> {
+    let sourceName: string | undefined;
+    let startingBranch: string | undefined = i.branch;
 
-      const requestBody: Record<string, unknown> = {
-        prompt: i.prompt,
-        title: i.title ?? i.prompt.slice(0, 80),
-        requirePlanApproval: false,
-        automationMode: "AUTO_CREATE_PR",
+    if (i.repo) {
+      const resolved = await resolveGithubSource(this.apiKey, i.repo, startingBranch);
+      sourceName = resolved.sourceName;
+      startingBranch = resolved.startingBranch;
+    }
+
+    const requestBody: Record<string, unknown> = {
+      prompt: i.prompt,
+      title: i.title ?? i.prompt.slice(0, 80),
+      requirePlanApproval: false,
+      automationMode: "AUTO_CREATE_PR",
+    };
+
+    if (sourceName) {
+      requestBody.sourceContext = {
+        source: sourceName,
+        githubRepoContext: startingBranch ? { startingBranch } : {},
       };
+    }
 
-      if (sourceName) {
-        requestBody.sourceContext = {
-          source: sourceName,
-          githubRepoContext: startingBranch ? { startingBranch } : {},
-        };
-      }
+    const session = (await julesRequest(this.apiKey, "POST", "/sessions", requestBody)) as {
+      name?: string;
+      id?: string;
+      state?: JulesState;
+    };
 
-      const session = (await julesRequest(apiKey, "POST", "/sessions", requestBody)) as {
-        name?: string;
-        id?: string;
-        state?: JulesState;
-      };
+    const sessionId = extractSessionId(session);
+    return {
+      sessionId,
+      state: session.state ?? "QUEUED",
+    };
+  }
 
-      const sessionId = extractSessionId(session);
-      return {
-        sessionId,
-        state: session.state ?? "QUEUED",
-      };
-    },
+  async getSession(sessionId: string): Promise<{ state: JulesState; lastMessage?: string }> {
+    const session = (await julesRequest(this.apiKey, "GET", `/sessions/${sessionId}`)) as {
+      state?: JulesState;
+      lastMessage?: string;
+      messages?: { role: string; content: string }[];
+    };
 
-    async getSession(sessionId) {
-      const session = (await julesRequest(apiKey, "GET", `/sessions/${sessionId}`)) as {
-        state?: JulesState;
-        lastMessage?: string;
-        // The Jules API may surface the last message differently; handle both
-        messages?: { role: string; content: string }[];
-      };
+    let lastMessage: string | undefined = session.lastMessage;
+    if (!lastMessage && session.messages?.length) {
+      const agentMsgs = session.messages.filter((m) => m.role === "agent");
+      lastMessage = agentMsgs[agentMsgs.length - 1]?.content;
+    }
 
-      // Derive a lastMessage: prefer explicit field, then last agent message
-      let lastMessage: string | undefined = session.lastMessage;
-      if (!lastMessage && session.messages?.length) {
-        const agentMsgs = session.messages.filter((m) => m.role === "agent");
-        lastMessage = agentMsgs[agentMsgs.length - 1]?.content;
-      }
+    return {
+      state: session.state ?? "QUEUED",
+      lastMessage,
+    };
+  }
 
-      return {
-        state: session.state ?? "QUEUED",
-        lastMessage,
-      };
-    },
+  async listActivities(sessionId: string): Promise<{
+    messages: { role: "agent" | "human"; content: string; timestamp: string }[];
+  }> {
+    const resp = (await julesRequest(this.apiKey, "GET", `/sessions/${sessionId}/activities`)) as {
+      activities?: {
+        role?: string;
+        author?: string;
+        content?: string;
+        message?: string;
+        timestamp?: string;
+        createTime?: string;
+      }[];
+    };
 
-    async listActivities(sessionId) {
-      const resp = (await julesRequest(apiKey, "GET", `/sessions/${sessionId}/activities`)) as {
-        activities?: {
-          role?: string;
-          author?: string;
-          content?: string;
-          message?: string;
-          timestamp?: string;
-          createTime?: string;
-        }[];
-      };
+    const messages = (resp.activities ?? []).map((a) => ({
+      role: ((a.role ?? a.author ?? "agent").toLowerCase().startsWith("human") ||
+      (a.role ?? a.author ?? "").toLowerCase().startsWith("user")
+        ? "human"
+        : "agent") as "agent" | "human",
+      content: a.content ?? a.message ?? "",
+      timestamp: a.timestamp ?? a.createTime ?? new Date().toISOString(),
+    }));
 
-      const messages = (resp.activities ?? []).map((a) => ({
-        // Role field may be "agent"/"human" or "AGENT"/"USER" or "author" — normalise
-        role: ((a.role ?? a.author ?? "agent").toLowerCase().startsWith("human") ||
-        (a.role ?? a.author ?? "").toLowerCase().startsWith("user")
-          ? "human"
-          : "agent") as "agent" | "human",
-        content: a.content ?? a.message ?? "",
-        timestamp: a.timestamp ?? a.createTime ?? new Date().toISOString(),
+    return { messages };
+  }
+
+  async sendMessage(sessionId: string, message: string): Promise<void> {
+    await julesRequest(this.apiKey, "POST", `/sessions/${sessionId}:sendMessage`, {
+      prompt: message,
+    });
+  }
+
+  async listSources(): Promise<{ repo: string; defaultBranch?: string }[]> {
+    const resp = (await julesRequest(this.apiKey, "GET", "/sources")) as {
+      sources?: {
+        githubRepo?: { owner: string; repo: string; defaultBranch?: { displayName?: string } };
+      }[];
+    };
+    return (resp.sources ?? [])
+      .filter((s) => s.githubRepo)
+      .map((s) => ({
+        repo: `${s.githubRepo!.owner}/${s.githubRepo!.repo}`,
+        defaultBranch: s.githubRepo!.defaultBranch?.displayName,
       }));
+  }
+}
 
-      return { messages };
-    },
-
-    async sendMessage(sessionId, message) {
-      await julesRequest(apiKey, "POST", `/sessions/${sessionId}:sendMessage`, {
-        prompt: message,
-      });
-    },
-
-    async listSources() {
-      const resp = (await julesRequest(apiKey, "GET", "/sources")) as {
-        sources?: {
-          githubRepo?: { owner: string; repo: string; defaultBranch?: { displayName?: string } };
-        }[];
-      };
-      return (resp.sources ?? [])
-        .filter((s) => s.githubRepo)
-        .map((s) => ({
-          repo: `${s.githubRepo!.owner}/${s.githubRepo!.repo}`,
-          defaultBranch: s.githubRepo!.defaultBranch?.displayName,
-        }));
-    },
-  };
+export function realJulesPort(apiKey: string): JulesPort {
+  return new RealJulesPortImpl(apiKey);
 }
