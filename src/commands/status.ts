@@ -3,6 +3,7 @@ import pc from "picocolors";
 import { StateStore } from "../state.js";
 import { STATE_PATH } from "../config.js";
 import { buildAdapter } from "../registry.js";
+import type { AgentSession } from "../types.js";
 import { relativeTime, renderTable, truncate, type StatusRow } from "../format.js";
 import { banner } from "../utils/banner.js";
 
@@ -14,17 +15,21 @@ async function collectRows(store: StateStore, sessionId?: string): Promise<Statu
   const sessions = sessionId ? store.list().filter((s) => s.id === sessionId) : store.list();
   if (sessions.length === 0) return null;
 
-  return Promise.all(
+  const toSave: AgentSession[] = [];
+
+  const rows = await Promise.all(
     sessions.map(async (s) => {
       let status = s.status;
       let updatedAt = s.lastPolled ?? s.dispatchedAt;
-      try {
-        const live = await buildAdapter(s.vendor).getStatus(s.id);
-        status = live.status;
-        updatedAt = live.lastUpdate.toISOString();
-        store.upsert({ ...s, status: live.status, lastPolled: updatedAt });
-      } catch {
-        // keep last-known status
+      if (status !== "completed" && status !== "failed") {
+        try {
+          const live = await buildAdapter(s.vendor).getStatus(s.id);
+          status = live.status;
+          updatedAt = live.lastUpdate.toISOString();
+          toSave.push({ ...s, status: live.status, lastPolled: updatedAt });
+        } catch {
+          // keep last-known status
+        }
       }
       return {
         vendor: s.vendor,
@@ -35,6 +40,12 @@ async function collectRows(store: StateStore, sessionId?: string): Promise<Statu
       };
     }),
   );
+
+  if (toSave.length > 0) {
+    store.upsertMany(toSave);
+  }
+
+  return rows;
 }
 
 function emptyMessage(sessionId?: string): string {
