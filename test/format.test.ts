@@ -49,4 +49,21 @@ describe("renderTable", () => {
     const widths = new Set(lines.map((l) => l.length));
     expect(widths.size).toBe(1);
   });
+
+  it("guards the internal width calculation against argument-spread stack overflows", () => {
+    // Formatter-only stress input: this is not a supported product session count.
+    // It is sized to catch regressions to Math.max(...largeArray) width checks.
+    const rows = Array.from({ length: 150_000 }, (_, index) => ({
+      vendor: "jules",
+      id: index === 149_999 ? "x".repeat(30) : "x",
+      label: "label",
+      status: "running",
+      lastUpdate: "now",
+    }));
+
+    const lines = renderTable(rows).split("\n");
+
+    expect(lines).toHaveLength(150_001);
+    expect(new Set(lines.map((line) => line.length)).size).toBe(1);
+  });
 });

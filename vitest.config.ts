@@ -1,12 +1,17 @@
-import { defineConfig } from "vitest/config";
 import { fileURLToPath } from "node:url";
+import { defineConfig } from "vitest/config";
+
+const fromRoot = (path: string) => fileURLToPath(new URL(path, import.meta.url));
 
 export default defineConfig({
-  test: { include: ["test/**/*.test.ts"] },
   resolve: {
     alias: {
-      "@": fileURLToPath(new URL("./web", import.meta.url)),
-      "next/server": fileURLToPath(new URL("./test/support/next-server.ts", import.meta.url)),
+      "@": fromRoot("./web"),
+      "next/navigation": fromRoot("./web/node_modules/next/navigation.js"),
+      "next/server": fromRoot("./test/support/next-server.ts"),
+      "posthog-js": fromRoot("./web/node_modules/posthog-js/dist/main.js"),
+      react: fromRoot("./web/node_modules/react/index.js"),
     },
   },
+  test: { include: ["test/**/*.test.ts"] },
 });

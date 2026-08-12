@@ -1,5 +1,11 @@
 export const NextResponse = {
   json(body: unknown, init?: ResponseInit): Response {
-    return Response.json(body, init);
+    const headers = new Headers(init?.headers);
+    headers.set("content-type", "application/json");
+
+    return new Response(JSON.stringify(body), {
+      ...init,
+      headers,
+    });
   },
 };

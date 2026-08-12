@@ -56,6 +56,23 @@ describe("ClaudeAdapter.dispatch", () => {
     });
   });
 
+  it("passes repo and branch to Claude as an exact clone-first instruction", async () => {
+    const port = fakePort();
+    const adapter = new ClaudeAdapter(port);
+
+    await adapter.dispatch({
+      prompt: "Fix the checkout race",
+      repo: "acme/payments",
+      branch: "fix/checkout-race",
+    });
+
+    expect(port.createSession).toHaveBeenCalledWith({
+      prompt:
+        "Work in the GitHub repository https://github.com/acme/payments on branch fix/checkout-race — clone it first, then complete this task:\n\nFix the checkout race",
+      modelId: undefined,
+    });
+  });
+
   it("dispatchedAt is an ISO string", async () => {
     const port = fakePort();
     const adapter = new ClaudeAdapter(port);

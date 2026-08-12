@@ -1,5 +1,9 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { DEFAULT_CLAUDE_MODEL, CLAUDE_AGENT_TOOLSET, DEFAULT_AGENT_SYSTEM_PROMPT, } from "../constants/claude.js";
+import {
+  DEFAULT_CLAUDE_MODEL,
+  CLAUDE_AGENT_TOOLSET,
+  DEFAULT_AGENT_SYSTEM_PROMPT,
+} from "../constants/claude.js";
 import { labelFromPrompt } from "../utils/text.js";
 // ---------------------------------------------------------------------------
 // Real port implementation
@@ -10,74 +14,74 @@ import { labelFromPrompt } from "../utils/text.js";
 // files under node_modules/@anthropic-ai/sdk/resources/beta/.
 // ---------------------------------------------------------------------------
 export function realClaudePort(apiKey) {
-    const client = new Anthropic({ apiKey });
-    return {
-        async createSession({ prompt, modelId }) {
-            const model = (modelId ?? DEFAULT_CLAUDE_MODEL);
-            const sessionName = `polyagent-${Date.now()}`;
-            // 1. Create an agent
-            const agent = await client.beta.agents.create({
-                name: sessionName,
-                model,
-                system: DEFAULT_AGENT_SYSTEM_PROMPT,
-                tools: [{ type: CLAUDE_AGENT_TOOLSET }],
-            });
-            // 2. Create a cloud environment with unrestricted networking
-            const env = await client.beta.environments.create({
-                name: sessionName,
-                config: {
-                    type: "cloud",
-                    networking: { type: "unrestricted" },
-                },
-            });
-            // 3. Create a session binding the agent and environment
-            const session = await client.beta.sessions.create({
-                agent: agent.id,
-                environment_id: env.id,
-                title: labelFromPrompt(prompt),
-            });
-            // 4. Open the event stream for this session
-            const streamResponse = await client.beta.sessions.events.stream(session.id);
-            const stream = await streamResponse;
-            // 5. Send the user prompt
-            await client.beta.sessions.events.send(session.id, {
-                events: [
-                    {
-                        type: "user.message",
-                        content: [{ type: "text", text: prompt }],
-                    },
-                ],
-            });
-            // 6. Iterate stream, capture first agent.message, stop on idle
-            let firstReply = "";
-            for await (const event of stream) {
-                if (event.type === "agent.message") {
-                    const msgEvent = event;
-                    firstReply = msgEvent.content
-                        .filter((b) => b.type === "text")
-                        .map((b) => b.text ?? "")
-                        .join("");
-                    break;
-                }
-                if (event.type === "session.status_idle") {
-                    break;
-                }
-            }
-            return { sessionId: session.id, firstReply, status: "running" };
+  const client = new Anthropic({ apiKey });
+  return {
+    async createSession({ prompt, modelId }) {
+      const model = modelId ?? DEFAULT_CLAUDE_MODEL;
+      const sessionName = `polyagent-${Date.now()}`;
+      // 1. Create an agent
+      const agent = await client.beta.agents.create({
+        name: sessionName,
+        model,
+        system: DEFAULT_AGENT_SYSTEM_PROMPT,
+        tools: [{ type: CLAUDE_AGENT_TOOLSET }],
+      });
+      // 2. Create a cloud environment with unrestricted networking
+      const env = await client.beta.environments.create({
+        name: sessionName,
+        config: {
+          type: "cloud",
+          networking: { type: "unrestricted" },
         },
-        async getStatus(sessionId) {
-            const s = await client.beta.sessions.retrieve(sessionId);
-            return { status: s.status ?? "running" };
-        },
-        async sendEvent(sessionId, message) {
-            await client.beta.sessions.events.send(sessionId, {
-                events: [
-                    {
-                        type: "user.message",
-                        content: [{ type: "text", text: message }],
-                    },
-                ],
-            });
-        },
-    };
+      });
+      // 3. Create a session binding the agent and environment
+      const session = await client.beta.sessions.create({
+        agent: agent.id,
+        environment_id: env.id,
+        title: labelFromPrompt(prompt),
+      });
+      // 4. Open the event stream for this session
+      const streamResponse = await client.beta.sessions.events.stream(session.id);
+      const stream = await streamResponse;
+      // 5. Send the user prompt
+      await client.beta.sessions.events.send(session.id, {
+        events: [
+          {
+            type: "user.message",
+            content: [{ type: "text", text: prompt }],
+          },
+        ],
+      });
+      // 6. Iterate stream, capture first agent.message, stop on idle
+      let firstReply = "";
+      for await (const event of stream) {
+        if (event.type === "agent.message") {
+          const msgEvent = event;
+          firstReply = msgEvent.content
+            .filter((b) => b.type === "text")
+            .map((b) => b.text ?? "")
+            .join("");
+          break;
+        }
+        if (event.type === "session.status_idle") {
+          break;
+        }
+      }
+      return { sessionId: session.id, firstReply, status: "running" };
+    },
+    async getStatus(sessionId) {
+      const s = await client.beta.sessions.retrieve(sessionId);
+      return { status: s.status ?? "running" };
+    },
+    async sendEvent(sessionId, message) {
+      await client.beta.sessions.events.send(sessionId, {
+        events: [
+          {
+            type: "user.message",
+            content: [{ type: "text", text: message }],
+          },
+        ],
+      });
+    },
+  };
 }
