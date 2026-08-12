@@ -8,7 +8,7 @@ export default defineConfig({
     alias: {
       "@": fromRoot("./web"),
       "next/navigation": fromRoot("./web/node_modules/next/navigation.js"),
-      "next/server": fromRoot("./test/stubs/next-server.ts"),
+      "next/server": fromRoot("./test/support/next-server.ts"),
       "posthog-js": fromRoot("./web/node_modules/posthog-js/dist/main.js"),
       react: fromRoot("./web/node_modules/react/index.js"),
     },
