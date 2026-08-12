@@ -97,4 +97,21 @@ describe("StateStore", () => {
     expect(reloaded.list()).toHaveLength(3);
     expect(reloaded.get("a")?.status).toBe("completed");
   });
+
+  it("rekey replaces a session id without duplicating the row", () => {
+    const store = new StateStore(join(dir, "state.json"));
+    store.upsert(makeSession("old"));
+    store.upsert(makeSession("other"));
+
+    store.rekey("old", { ...makeSession("new"), status: "running" });
+
+    expect(store.list()).toHaveLength(2);
+    expect(store.get("old")).toBeUndefined();
+    expect(store.get("new")?.status).toBe("running");
+    expect(store.get("other")?.id).toBe("other");
+
+    const reloaded = new StateStore(join(dir, "state.json"));
+    expect(reloaded.get("new")?.id).toBe("new");
+    expect(reloaded.get("old")).toBeUndefined();
+  });
 });

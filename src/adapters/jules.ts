@@ -56,7 +56,8 @@ export class JulesAdapter implements AgentAdapter {
     };
   }
 
-  async sendFollowup(sessionId: string, message: string): Promise<void> {
+  async sendFollowup(sessionId: string, message: string): Promise<{ sessionId?: string }> {
     await this.port.sendMessage(sessionId, message);
+    return {};
   }
 }

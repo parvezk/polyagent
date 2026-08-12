@@ -14,5 +14,9 @@ export interface AgentAdapter {
 
   // Send a follow-up message to a running session. Present in the contract;
   // wired to a CLI command in V3, not V1.
-  sendFollowup(sessionId: string, message: string): Promise<void>;
+  //
+  // Some vendors (Gemini Interactions API) mint a new session/interaction id per
+  // follow-up. When that happens, return `{ sessionId }` so callers can re-key
+  // persisted state. Vendors that keep the same id return `{}`.
+  sendFollowup(sessionId: string, message: string): Promise<{ sessionId?: string }>;
 }

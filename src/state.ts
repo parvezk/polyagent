@@ -59,4 +59,12 @@ export class StateStore {
   get(id: string): AgentSession | undefined {
     return this.sessions.find((s) => s.id === id);
   }
+
+  /** Replace a session's vendor-native id (e.g. Gemini follow-up minting a new interaction). */
+  rekey(oldId: string, next: AgentSession): void {
+    const i = this.sessions.findIndex((s) => s.id === oldId);
+    if (i >= 0) this.sessions[i] = next;
+    else this.sessions.push(next);
+    this.save();
+  }
 }

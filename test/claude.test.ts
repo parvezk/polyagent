@@ -167,7 +167,7 @@ describe("ClaudeAdapter.getOutput", () => {
 describe("ClaudeAdapter.sendFollowup", () => {
   it("delegates to port.sendEvent", async () => {
     const port = fakePort();
-    await new ClaudeAdapter(port).sendFollowup("sess_1", "hello");
+    await expect(new ClaudeAdapter(port).sendFollowup("sess_1", "hello")).resolves.toEqual({});
     expect(port.sendEvent).toHaveBeenCalledWith("sess_1", "hello");
   });
 });

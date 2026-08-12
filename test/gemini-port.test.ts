@@ -92,15 +92,24 @@ describe("realGeminiPort", () => {
     });
   });
 
-  it("threads follow-ups through the previous interaction", async () => {
-    const fetchMock = vi.fn<typeof fetch>().mockResolvedValueOnce(jsonResponse({}));
+  it("threads follow-ups through the previous interaction and returns the new id", async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValueOnce(
+      jsonResponse({
+        id: "interaction-456",
+        status: "in_progress",
+      }),
+    );
     vi.stubGlobal("fetch", fetchMock);
 
-    await realGeminiPort("test-api-key").sendFollowup(
+    const result = await realGeminiPort("test-api-key").sendFollowup(
       "interaction-123",
       "Apply the requested changes",
     );
 
+    expect(result).toEqual({
+      interactionId: "interaction-456",
+      status: "in_progress",
+    });
     expect(fetchMock).toHaveBeenCalledWith(`${GEMINI_API_BASE}/interactions`, {
       method: "POST",
       headers: {
@@ -115,6 +124,15 @@ describe("realGeminiPort", () => {
         previous_interaction_id: "interaction-123",
       }),
     });
+  });
+
+  it("rejects follow-ups that omit the new interaction id", async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValueOnce(jsonResponse({ status: "in_progress" }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      realGeminiPort("test-api-key").sendFollowup("interaction-123", "Continue"),
+    ).rejects.toThrow("returned no interaction id");
   });
 
   it("surfaces non-successful API responses with request context", async () => {

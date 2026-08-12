@@ -57,6 +57,7 @@ export default function DashboardPage() {
         key={selected?.id ?? "closed"}
         session={selected}
         onClose={() => setSelected(null)}
+        onSessionChange={setSelected}
       />
     </div>
   );

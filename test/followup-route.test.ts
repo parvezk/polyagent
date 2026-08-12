@@ -4,6 +4,7 @@ const fakes = vi.hoisted(() => ({
   buildAdapter: vi.fn(),
   getSession: vi.fn(),
   patchSession: vi.fn(),
+  rekeySession: vi.fn(),
   sendFollowup: vi.fn(),
 }));
 
@@ -14,6 +15,7 @@ vi.mock("@/lib/core", () => ({
 vi.mock("@/lib/sessions-store", () => ({
   getSession: fakes.getSession,
   patchSession: fakes.patchSession,
+  rekeySession: fakes.rekeySession,
 }));
 
 import { POST } from "../web/app/api/sessions/[id]/followup/route";
@@ -50,6 +52,7 @@ describe("POST /api/sessions/[id]/followup", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     fakes.getSession.mockResolvedValue(session);
+    fakes.sendFollowup.mockResolvedValue({});
     fakes.buildAdapter.mockReturnValue({ sendFollowup: fakes.sendFollowup });
   });
 
@@ -61,6 +64,7 @@ describe("POST /api/sessions/[id]/followup", () => {
     expect(fakes.getSession).not.toHaveBeenCalled();
     expect(fakes.buildAdapter).not.toHaveBeenCalled();
     expect(fakes.patchSession).not.toHaveBeenCalled();
+    expect(fakes.rekeySession).not.toHaveBeenCalled();
   });
 
   it.each([undefined, "", "   ", "\n\t"])(
@@ -73,6 +77,7 @@ describe("POST /api/sessions/[id]/followup", () => {
       expect(fakes.getSession).not.toHaveBeenCalled();
       expect(fakes.buildAdapter).not.toHaveBeenCalled();
       expect(fakes.patchSession).not.toHaveBeenCalled();
+      expect(fakes.rekeySession).not.toHaveBeenCalled();
     },
   );
 
@@ -84,6 +89,7 @@ describe("POST /api/sessions/[id]/followup", () => {
     expect(fakes.getSession).toHaveBeenCalledWith("missing-session");
     expect(fakes.buildAdapter).not.toHaveBeenCalled();
     expect(fakes.patchSession).not.toHaveBeenCalled();
+    expect(fakes.rekeySession).not.toHaveBeenCalled();
     expect(response.status).toBe(404);
     await expect(response.json()).resolves.toEqual({ error: "Session not found" });
   });
@@ -101,8 +107,26 @@ describe("POST /api/sessions/[id]/followup", () => {
       status: "running",
       last_polled: expect.any(String),
     });
+    expect(fakes.rekeySession).not.toHaveBeenCalled();
     expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual({ ok: true });
+    await expect(response.json()).resolves.toEqual({ ok: true, sessionId: "session-1" });
+  });
+
+  it("re-keys the session when the vendor mints a new follow-up id", async () => {
+    fakes.sendFollowup.mockResolvedValue({ sessionId: "interaction-next" });
+
+    const response = await POST(jsonRequest({ message: "Continue from prior turn" }), context());
+
+    expect(fakes.rekeySession).toHaveBeenCalledWith("session-1", "interaction-next", {
+      status: "running",
+      last_polled: expect.any(String),
+    });
+    expect(fakes.patchSession).not.toHaveBeenCalled();
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      ok: true,
+      sessionId: "interaction-next",
+    });
   });
 
   it("marks completed sessions running after accepting a follow-up", async () => {
@@ -125,7 +149,7 @@ describe("POST /api/sessions/[id]/followup", () => {
     );
 
     expect(response.status).toBe(200);
-    await expect(response.json()).resolves.toEqual({ ok: true });
+    await expect(response.json()).resolves.toEqual({ ok: true, sessionId: "sess_1" });
     expect(fakes.buildAdapter).toHaveBeenCalledWith("claude");
     expect(fakes.sendFollowup).toHaveBeenCalledWith("sess_1", "Please continue");
     expect(fakes.patchSession).toHaveBeenCalledWith("sess_1", {
@@ -141,6 +165,7 @@ describe("POST /api/sessions/[id]/followup", () => {
 
     expect(fakes.sendFollowup).toHaveBeenCalledWith("session-1", "Continue");
     expect(fakes.patchSession).not.toHaveBeenCalled();
+    expect(fakes.rekeySession).not.toHaveBeenCalled();
     expect(response.status).toBe(502);
     await expect(response.json()).resolves.toEqual({ error: "Vendor unavailable" });
   });

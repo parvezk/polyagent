@@ -9,7 +9,10 @@ function fakePort(over?: Partial<GeminiPort>): GeminiPort {
       status: "in_progress" as GeminiInteractionStatus,
     }),
     getStatus: async (_id) => ({ status: "in_progress" as GeminiInteractionStatus }),
-    sendFollowup: async (_id, _msg) => undefined,
+    sendFollowup: async (_id, _msg) => ({
+      interactionId: "gemini_2",
+      status: "in_progress" as GeminiInteractionStatus,
+    }),
     ...over,
   };
 }
@@ -92,5 +95,12 @@ describe("GeminiAdapter", () => {
 
     expect(status.status).toBe("unknown");
     expect(status.needsInput).toBe(false);
+  });
+
+  it("sendFollowup returns the new interaction id so callers can re-key state", async () => {
+    const adapter = new GeminiAdapter(fakePort());
+    await expect(adapter.sendFollowup("gemini_1", "Keep going")).resolves.toEqual({
+      sessionId: "gemini_2",
+    });
   });
 });

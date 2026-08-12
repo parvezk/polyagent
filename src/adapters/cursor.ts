@@ -60,7 +60,8 @@ export class CursorAdapter implements AgentAdapter {
     };
   }
 
-  async sendFollowup(sessionId: string, message: string): Promise<void> {
+  async sendFollowup(sessionId: string, message: string): Promise<{ sessionId?: string }> {
     await this.port.sendFollowup(sessionId, message);
+    return {};
   }
 }
