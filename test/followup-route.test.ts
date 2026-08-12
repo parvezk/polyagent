@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({
+const fakes = vi.hoisted(() => ({
   buildAdapter: vi.fn(),
   getSession: vi.fn(),
   patchSession: vi.fn(),
@@ -8,35 +8,113 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/core", () => ({
-  buildAdapter: mocks.buildAdapter,
+  buildAdapter: fakes.buildAdapter,
 }));
 
 vi.mock("@/lib/sessions-store", () => ({
-  getSession: mocks.getSession,
-  patchSession: mocks.patchSession,
+  getSession: fakes.getSession,
+  patchSession: fakes.patchSession,
 }));
 
 import { POST } from "../web/app/api/sessions/[id]/followup/route";
 
-describe("POST /api/sessions/:id/followup", () => {
+const session = {
+  id: "session-1",
+  user_id: "user-123",
+  vendor: "gemini" as const,
+  label: null,
+  status: "running",
+  output_url: null,
+  first_message: null,
+  dispatched_at: "2026-07-28T10:00:00.000Z",
+  last_polled: null,
+};
+
+function rawRequest(body: string): Request {
+  return new Request("http://localhost/api/sessions/session-1/followup", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body,
+  });
+}
+
+function jsonRequest(body: unknown): Request {
+  return rawRequest(JSON.stringify(body));
+}
+
+function context(id = "session-1") {
+  return { params: Promise.resolve({ id }) };
+}
+
+describe("POST /api/sessions/[id]/followup", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
-    mocks.buildAdapter.mockReturnValue({ sendFollowup: mocks.sendFollowup });
+    vi.resetAllMocks();
+    fakes.getSession.mockResolvedValue(session);
+    fakes.buildAdapter.mockReturnValue({ sendFollowup: fakes.sendFollowup });
+  });
+
+  it("rejects malformed JSON before looking up a session", async () => {
+    const response = await POST(rawRequest("{"), context());
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toEqual({ error: "message is required" });
+    expect(fakes.getSession).not.toHaveBeenCalled();
+    expect(fakes.buildAdapter).not.toHaveBeenCalled();
+    expect(fakes.patchSession).not.toHaveBeenCalled();
+  });
+
+  it.each([undefined, "", "   ", "\n\t"])(
+    "rejects a blank message before looking up a session",
+    async (message) => {
+      const response = await POST(jsonRequest({ message }), context());
+
+      expect(response.status).toBe(400);
+      await expect(response.json()).resolves.toEqual({ error: "message is required" });
+      expect(fakes.getSession).not.toHaveBeenCalled();
+      expect(fakes.buildAdapter).not.toHaveBeenCalled();
+      expect(fakes.patchSession).not.toHaveBeenCalled();
+    },
+  );
+
+  it("returns not found without constructing an adapter for an inaccessible session", async () => {
+    fakes.getSession.mockResolvedValue(null);
+
+    const response = await POST(jsonRequest({ message: "Continue" }), context("missing-session"));
+
+    expect(fakes.getSession).toHaveBeenCalledWith("missing-session");
+    expect(fakes.buildAdapter).not.toHaveBeenCalled();
+    expect(fakes.patchSession).not.toHaveBeenCalled();
+    expect(response.status).toBe(404);
+    await expect(response.json()).resolves.toEqual({ error: "Session not found" });
+  });
+
+  it("routes the exact message to the persisted session vendor", async () => {
+    const message = "  Keep the existing formatting.\n";
+
+    const response = await POST(jsonRequest({ message }), context());
+
+    expect(fakes.getSession).toHaveBeenCalledWith("session-1");
+    expect(fakes.buildAdapter).toHaveBeenCalledWith("gemini");
+    expect(fakes.sendFollowup).toHaveBeenCalledWith("session-1", message);
+    expect(fakes.sendFollowup).toHaveBeenCalledTimes(1);
+    expect(fakes.patchSession).toHaveBeenCalledWith("session-1", {
+      status: "running",
+      last_polled: expect.any(String),
+    });
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ ok: true });
   });
 
   it("marks completed sessions running after accepting a follow-up", async () => {
-    mocks.getSession.mockResolvedValue({
+    fakes.getSession.mockResolvedValue({
+      ...session,
       id: "sess_1",
       user_id: "user_1",
       vendor: "claude",
       label: "Done before",
       status: "completed",
-      output_url: null,
-      first_message: null,
-      dispatched_at: "2026-08-10T00:00:00.000Z",
       last_polled: "2026-08-10T00:01:00.000Z",
     });
-    mocks.sendFollowup.mockResolvedValue(undefined);
 
     const response = await POST(
       new Request("https://polyagent.test/api/sessions/sess_1/followup", {
@@ -48,10 +126,22 @@ describe("POST /api/sessions/:id/followup", () => {
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ ok: true });
-    expect(mocks.sendFollowup).toHaveBeenCalledWith("sess_1", "Please continue");
-    expect(mocks.patchSession).toHaveBeenCalledWith("sess_1", {
+    expect(fakes.buildAdapter).toHaveBeenCalledWith("claude");
+    expect(fakes.sendFollowup).toHaveBeenCalledWith("sess_1", "Please continue");
+    expect(fakes.patchSession).toHaveBeenCalledWith("sess_1", {
       status: "running",
       last_polled: expect.any(String),
     });
+  });
+
+  it("reports a vendor failure without returning success", async () => {
+    fakes.sendFollowup.mockRejectedValue(new Error("Vendor unavailable"));
+
+    const response = await POST(jsonRequest({ message: "Continue" }), context());
+
+    expect(fakes.sendFollowup).toHaveBeenCalledWith("session-1", "Continue");
+    expect(fakes.patchSession).not.toHaveBeenCalled();
+    expect(response.status).toBe(502);
+    await expect(response.json()).resolves.toEqual({ error: "Vendor unavailable" });
   });
 });
