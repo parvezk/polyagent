@@ -16,21 +16,16 @@ describe("session polling intervals", () => {
 
   it("keeps polling the sessions list until every session is terminal", () => {
     expect(getSessionsRefreshInterval(undefined)).toBe(3000);
-    expect(getSessionsRefreshInterval({ sessions: [] })).toBe(0);
+    // Empty must keep polling: list failures also return `{ sessions: [] }`.
+    expect(getSessionsRefreshInterval({ sessions: [] })).toBe(3000);
     expect(
       getSessionsRefreshInterval({
-        sessions: [
-          { status: "completed" },
-          { status: "failed" },
-        ],
+        sessions: [{ status: "completed" }, { status: "failed" }],
       }),
     ).toBe(0);
     expect(
       getSessionsRefreshInterval({
-        sessions: [
-          { status: "completed" },
-          { status: "running" },
-        ],
+        sessions: [{ status: "completed" }, { status: "running" }],
       }),
     ).toBe(3000);
   });

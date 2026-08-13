@@ -14,9 +14,13 @@ export function isTerminalSessionStatus(status: SessionStatus | undefined): bool
 export function getSessionsRefreshInterval(
   currentData: { sessions?: SessionStatusLike[] } | undefined,
 ): number {
-  if (!currentData?.sessions) return SESSIONS_REFRESH_INTERVAL_MS;
+  const sessions = currentData?.sessions;
+  // Keep polling when the list is missing or empty. `[].every(...)` is vacuously
+  // true, and GET /api/sessions returns `{ sessions: [] }` on list failures — so
+  // treating empty as "all terminal" permanently freezes the dashboard.
+  if (!sessions || sessions.length === 0) return SESSIONS_REFRESH_INTERVAL_MS;
 
-  return currentData.sessions.every((session) => isTerminalSessionStatus(session.status))
+  return sessions.every((session) => isTerminalSessionStatus(session.status))
     ? 0
     : SESSIONS_REFRESH_INTERVAL_MS;
 }
