@@ -23,6 +23,7 @@ describe("CLI error handling", () => {
 
     expect(result.status).toBe(1);
     expect(result.signal).toBeNull();
+    expect(result.stdout).toBe("");
     expect(result.stderr.trim()).toBe(
       "No API key for claude. Set ANTHROPIC_API_KEY in .env.local.",
     );
