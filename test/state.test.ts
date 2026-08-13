@@ -109,7 +109,10 @@ describe("StateStore", () => {
     // Watch tick updates only A from stale in-memory view — must not drop B.
     watcher.upsertMany([{ ...makeSession("a"), status: "completed" }]);
 
-    const onDisk = new StateStore(path).list().map((s) => s.id).sort();
+    const onDisk = new StateStore(path)
+      .list()
+      .map((s) => s.id)
+      .sort();
     expect(onDisk).toEqual(["a", "b"]);
     expect(watcher.get("a")?.status).toBe("completed");
     expect(watcher.get("b")?.id).toBe("b");
@@ -123,6 +126,11 @@ describe("StateStore", () => {
     new StateStore(path).upsert(makeSession("b"));
     watcher.upsert({ ...makeSession("a"), status: "failed" });
 
-    expect(new StateStore(path).list().map((s) => s.id).sort()).toEqual(["a", "b"]);
+    expect(
+      new StateStore(path)
+        .list()
+        .map((s) => s.id)
+        .sort(),
+    ).toEqual(["a", "b"]);
   });
 });

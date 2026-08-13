@@ -5,7 +5,9 @@ const mocks = vi.hoisted(() => ({
   buildAdapter: vi.fn(),
   getStatus: vi.fn(),
   sessions: [] as AgentSession[],
+  load: vi.fn(),
   upsert: vi.fn(),
+  upsertMany: vi.fn(),
 }));
 
 vi.mock("../src/config.js", () => ({
@@ -18,8 +20,10 @@ vi.mock("../src/registry.js", () => ({
 
 vi.mock("../src/state.js", () => ({
   StateStore: vi.fn().mockImplementation(() => ({
+    load: mocks.load,
     list: () => mocks.sessions,
     upsert: mocks.upsert,
+    upsertMany: mocks.upsertMany,
   })),
 }));
 
@@ -57,8 +61,10 @@ describe("statusCommand terminal polling", () => {
   it("does not poll adapters or upsert state for terminal sessions", async () => {
     await statusCommand();
 
+    expect(mocks.load).toHaveBeenCalled();
     expect(mocks.buildAdapter).not.toHaveBeenCalled();
     expect(mocks.getStatus).not.toHaveBeenCalled();
     expect(mocks.upsert).not.toHaveBeenCalled();
+    expect(mocks.upsertMany).not.toHaveBeenCalled();
   });
 });
