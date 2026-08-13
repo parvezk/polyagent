@@ -35,6 +35,9 @@ export class StateStore {
   }
 
   upsert(session: AgentSession): void {
+    // Reload so concurrent writers (e.g. dispatch while status --watch runs)
+    // are not clobbered by a full-file save from stale memory.
+    this.load();
     const i = this.sessions.findIndex((s) => s.id === session.id);
     if (i >= 0) this.sessions[i] = session;
     else this.sessions.push(session);
@@ -42,14 +45,14 @@ export class StateStore {
   }
 
   upsertMany(sessions: AgentSession[]): void {
+    if (sessions.length === 0) return;
+    this.load();
     for (const session of sessions) {
       const i = this.sessions.findIndex((s) => s.id === session.id);
       if (i >= 0) this.sessions[i] = session;
       else this.sessions.push(session);
     }
-    if (sessions.length > 0) {
-      this.save();
-    }
+    this.save();
   }
 
   list(): AgentSession[] {

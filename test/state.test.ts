@@ -97,4 +97,32 @@ describe("StateStore", () => {
     expect(reloaded.list()).toHaveLength(3);
     expect(reloaded.get("a")?.status).toBe("completed");
   });
+
+  it("upsertMany preserves sessions written by another process", () => {
+    const path = join(dir, "state.json");
+    const watcher = new StateStore(path);
+    watcher.upsert(makeSession("a"));
+
+    // Concurrent dispatch (separate process / StateStore instance).
+    new StateStore(path).upsert(makeSession("b"));
+
+    // Watch tick updates only A from stale in-memory view — must not drop B.
+    watcher.upsertMany([{ ...makeSession("a"), status: "completed" }]);
+
+    const onDisk = new StateStore(path).list().map((s) => s.id).sort();
+    expect(onDisk).toEqual(["a", "b"]);
+    expect(watcher.get("a")?.status).toBe("completed");
+    expect(watcher.get("b")?.id).toBe("b");
+  });
+
+  it("upsert preserves sessions written by another process", () => {
+    const path = join(dir, "state.json");
+    const watcher = new StateStore(path);
+    watcher.upsert(makeSession("a"));
+
+    new StateStore(path).upsert(makeSession("b"));
+    watcher.upsert({ ...makeSession("a"), status: "failed" });
+
+    expect(new StateStore(path).list().map((s) => s.id).sort()).toEqual(["a", "b"]);
+  });
 });
