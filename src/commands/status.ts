@@ -12,6 +12,8 @@ const WATCH_INTERVAL_MS = 4000;
 
 /** Poll every stored session's live status and build display rows. */
 async function collectRows(store: StateStore, sessionId?: string): Promise<StatusRow[] | null> {
+  // Pick up sessions written by other CLI processes between watch ticks.
+  store.load();
   const sessions = sessionId ? store.list().filter((s) => s.id === sessionId) : store.list();
   if (sessions.length === 0) return null;
 
