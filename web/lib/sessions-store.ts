@@ -65,7 +65,29 @@ export async function patchSession(
   patch: Partial<Pick<DbSession, "status" | "last_polled">>,
 ): Promise<void> {
   const supabase = await createClient();
-  await supabase.from("sessions").update(patch).eq("id", id);
+  const { error } = await supabase.from("sessions").update(patch).eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * Re-key a session when a vendor mints a new native id on follow-up (Gemini).
+ * Updates the primary key in place — sessions.id has no inbound FKs.
+ */
+export async function rekeySession(
+  oldId: string,
+  newId: string,
+  patch: Partial<Pick<DbSession, "status" | "last_polled">> = {},
+): Promise<void> {
+  if (oldId === newId) {
+    await patchSession(oldId, patch);
+    return;
+  }
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("sessions")
+    .update({ id: newId, ...patch })
+    .eq("id", oldId);
+  if (error) throw new Error(error.message);
 }
 
 export async function upsertSessions(rows: DbSession[]): Promise<void> {

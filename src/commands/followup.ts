@@ -14,7 +14,26 @@ export async function followupCommand(sessionId: string, message: string): Promi
   }
 
   try {
-    await buildAdapter(session.vendor).sendFollowup(sessionId, message);
+    const result = await buildAdapter(session.vendor).sendFollowup(sessionId, message);
+    const nextId = result.sessionId;
+    if (nextId && nextId !== sessionId) {
+      store.rekey(sessionId, {
+        ...session,
+        id: nextId,
+        status: "running",
+        lastPolled: new Date().toISOString(),
+      });
+      console.log(pc.green(`✓ Sent follow-up to ${session.vendor} session ${sessionId}`));
+      console.log(pc.dim(`  Continued as ${nextId}`));
+      console.log(pc.dim(`  Track with: polyagent status --watch`));
+      return;
+    }
+
+    store.upsert({
+      ...session,
+      status: "running",
+      lastPolled: new Date().toISOString(),
+    });
     console.log(pc.green(`✓ Sent follow-up to ${session.vendor} session ${sessionId}`));
     console.log(pc.dim(`  Track with: polyagent status --watch`));
   } catch (err) {

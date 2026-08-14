@@ -25,20 +25,34 @@ interface DetailResponse {
 export function SessionDrawer({
   session,
   onClose,
+  onSessionChange,
 }: {
   session: SessionView | null;
   onClose: () => void;
+  onSessionChange?: (session: SessionView) => void;
 }) {
   return (
     <Sheet open={!!session} onOpenChange={(o) => !o && onClose()}>
       <SheetContent className="flex w-full flex-col border-l-2 border-l-[#D97757]/40 bg-zinc-950 text-zinc-100 sm:max-w-xl">
-        {session && <SessionDrawerContent key={session.id} session={session} />}
+        {session && (
+          <SessionDrawerContent
+            key={session.id}
+            session={session}
+            onSessionChange={onSessionChange}
+          />
+        )}
       </SheetContent>
     </Sheet>
   );
 }
 
-function SessionDrawerContent({ session }: { session: SessionView }) {
+function SessionDrawerContent({
+  session,
+  onSessionChange,
+}: {
+  session: SessionView;
+  onSessionChange?: (session: SessionView) => void;
+}) {
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
   // Optimistically-shown follow-ups (server output may not echo them back).
@@ -69,8 +83,17 @@ function SessionDrawerContent({ session }: { session: SessionView }) {
       if (!res.ok) throw new Error(d.error ?? "Follow-up failed");
       toast.success("Follow-up sent");
       setSent((prev) => [...prev, submittedMessage]);
-      mutate(`/api/sessions/${session.id}`);
-      mutate("/api/sessions");
+
+      const nextId = typeof d.sessionId === "string" ? d.sessionId : session.id;
+      if (nextId !== session.id) {
+        // Vendor minted a new id (Gemini). Point the drawer at the new session
+        // before mutating caches so subsequent polls hit the follow-up turn.
+        onSessionChange?.({ ...session, id: nextId, status: "running" });
+        mutate("/api/sessions");
+      } else {
+        mutate(`/api/sessions/${session.id}`);
+        mutate("/api/sessions");
+      }
     } catch (err) {
       setMessage((currentDraft) => getDraftAfterFailedFollowup(currentDraft, submittedMessage));
       toast.error(err instanceof Error ? err.message : "Follow-up failed");

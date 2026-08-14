@@ -36,10 +36,14 @@ export interface GeminiPort {
   /**
    * Send a follow-up message, continuing from a previous interaction.
    * Maps to: POST /interactions with previous_interaction_id.
+   * Each follow-up creates a NEW interaction id that callers must track.
    * ASSUMPTION: the environment_id from the original interaction is NOT threaded through here —
    * the API docs show previous_interaction_id alone is sufficient to continue context.
    */
-  sendFollowup(interactionId: string, message: string): Promise<void>;
+  sendFollowup(
+    interactionId: string,
+    message: string,
+  ): Promise<{ interactionId: string; status: GeminiInteractionStatus }>;
 }
 
 // ---------------------------------------------------------------------------
@@ -118,16 +122,31 @@ export function realGeminiPort(apiKey: string): GeminiPort {
     },
 
     async sendFollowup(interactionId, message) {
-      // CONFIRMED: previous_interaction_id threads conversation context
+      // CONFIRMED: previous_interaction_id threads conversation context.
+      // Each POST creates a new interaction — the returned id replaces the prior one.
       // ASSUMPTION: reuses the same default agent; for production you'd pass environment_id to
       // reuse the exact sandbox, but that requires storing it at dispatch time.
-      await geminiRequest(apiKey, "POST", "/interactions", {
+      const resp = (await geminiRequest(apiKey, "POST", "/interactions", {
         agent: ANTIGRAVITY_AGENT,
         input: [{ type: "text", text: message }],
         environment: "remote",
         background: true,
         previous_interaction_id: interactionId,
-      });
+      })) as {
+        id?: string;
+        status?: GeminiInteractionStatus;
+      };
+
+      if (!resp.id) {
+        throw new Error(
+          "Gemini follow-up succeeded but returned no interaction id; cannot track the new turn",
+        );
+      }
+
+      return {
+        interactionId: resp.id,
+        status: resp.status ?? "in_progress",
+      };
     },
   };
 }

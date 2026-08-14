@@ -62,7 +62,9 @@ export class GeminiAdapter implements AgentAdapter {
     };
   }
 
-  async sendFollowup(sessionId: string, message: string): Promise<void> {
-    await this.port.sendFollowup(sessionId, message);
+  async sendFollowup(sessionId: string, message: string): Promise<{ sessionId?: string }> {
+    const result = await this.port.sendFollowup(sessionId, message);
+    // Gemini mints a new interaction id per follow-up; callers must re-key state.
+    return { sessionId: result.interactionId };
   }
 }

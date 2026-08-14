@@ -62,7 +62,8 @@ export class ClaudeAdapter implements AgentAdapter {
     };
   }
 
-  async sendFollowup(sessionId: string, message: string): Promise<void> {
+  async sendFollowup(sessionId: string, message: string): Promise<{ sessionId?: string }> {
     await this.port.sendEvent(sessionId, message);
+    return {};
   }
 }
