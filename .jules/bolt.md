@@ -20,3 +20,7 @@
 ## 2024-08-10 - Targeted Updates vs Bulk Upserts
 **Learning:** Using full object `upsertSessions` for partial state updates (like polling) causes race conditions and unnecessary DB load.
 **Action:** Use targeted `patchSession` with concurrent `Promise.all` for partial updates to avoid overwriting fields modified asynchronously and to improve polling performance.
+
+## 2026-08-14 - Batch Large Array Insertions
+**Learning:** Large array bulk insertions directly to database or API endpoints without chunking can exceed payload limits, crash requests, and spike memory, especially during mass import operations.
+**Action:** Use chunked batching in a loop to slice large arrays into manageable batch sizes before awaiting bulk upserts or inserts.

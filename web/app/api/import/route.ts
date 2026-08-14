@@ -12,13 +12,18 @@ export async function POST() {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
+  const BATCH_SIZE = 100;
   let imported = 0;
   try {
     const fileSessions = new StateStore(STATE_PATH).list();
     if (fileSessions.length > 0) {
       const rows = fileSessions.map((s) => toDbRow(s, userId));
-      // TODO: Implement batching for large state files to avoid payload limits
-      await upsertSessions(rows);
+
+      // Batch large state files to avoid DB payload limits and endpoint memory spikes
+      for (let i = 0; i < rows.length; i += BATCH_SIZE) {
+        const batch = rows.slice(i, i + BATCH_SIZE);
+        await upsertSessions(batch);
+      }
       imported = rows.length;
     }
   } catch {
