@@ -20,3 +20,7 @@
 ## 2024-08-10 - Targeted Updates vs Bulk Upserts
 **Learning:** Using full object `upsertSessions` for partial state updates (like polling) causes race conditions and unnecessary DB load.
 **Action:** Use targeted `patchSession` with concurrent `Promise.all` for partial updates to avoid overwriting fields modified asynchronously and to improve polling performance.
+
+## 2024-08-13 - Batch Bulk Database Inserts
+**Learning:** Sending the entire array of parsed file states in a single bulk operation (`upsertSessions(rows)`) can cause memory spikes in the endpoint and trigger payload limits on Supabase for large datasets.
+**Action:** Always batch large arrays into smaller chunks (e.g., 100 items per request) when writing to the database using `slice` in a loop, converting O(1) massive requests into a safer, bounded stream.
