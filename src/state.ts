@@ -42,14 +42,17 @@ export class StateStore {
   }
 
   upsertMany(sessions: AgentSession[]): void {
+    if (sessions.length === 0) return;
+
+    // ⚡ Bolt: Use a Map to turn O(N * M) nested array lookups into O(N + M).
+    // This significantly reduces compute time when bulk-updating many sessions.
+    const map = new Map(this.sessions.map((s) => [s.id, s]));
     for (const session of sessions) {
-      const i = this.sessions.findIndex((s) => s.id === session.id);
-      if (i >= 0) this.sessions[i] = session;
-      else this.sessions.push(session);
+      map.set(session.id, session);
     }
-    if (sessions.length > 0) {
-      this.save();
-    }
+    this.sessions = Array.from(map.values());
+
+    this.save();
   }
 
   list(): AgentSession[] {
