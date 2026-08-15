@@ -24,3 +24,7 @@
 ## 2024-08-13 - Batch Bulk Database Inserts
 **Learning:** Sending the entire array of parsed file states in a single bulk operation (`upsertSessions(rows)`) can cause memory spikes in the endpoint and trigger payload limits on Supabase for large datasets.
 **Action:** Always batch large arrays into smaller chunks (e.g., 100 items per request) when writing to the database using `slice` in a loop, converting O(1) massive requests into a safer, bounded stream.
+
+## 2024-08-15 - Optimize O(n^2) nested loops in array state updates
+**Learning:** Using `Array.prototype.findIndex` inside a `for` loop to update or push new items to an array has an O(N * M) time complexity. For frequently-polled operations or large data sets, this leads to observable performance degradation (e.g. going from ~0.9s to ~3ms for 10K items in testing).
+**Action:** Replace nested array lookups in state merging logic with a `Map`. Index existing items by a unique key (O(N)), update or insert items using `Map.set()` in a loop (O(M)), and convert the Map values back to an array. This changes complexity to O(N + M).
