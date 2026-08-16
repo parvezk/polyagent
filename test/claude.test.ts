@@ -14,6 +14,7 @@ function fakePort(over?: Partial<ClaudePort>): ClaudePort {
       status: "running" as const,
     }),
     getStatus: vi.fn().mockResolvedValue({ status: "running" as const }),
+    listMessages: vi.fn().mockResolvedValue({ messages: [] }),
     sendEvent: vi.fn().mockResolvedValue(undefined),
     ...over,
   };
@@ -139,21 +140,35 @@ describe("ClaudeAdapter.getStatus — status mapping", () => {
 // ---------------------------------------------------------------------------
 
 describe("ClaudeAdapter.getOutput", () => {
-  it("returns an AgentOutput with one message when summary is present", async () => {
+  it("returns conversation messages from port.listMessages", async () => {
     const port = fakePort({
-      getStatus: vi.fn().mockResolvedValue({ status: "idle", summary: "Done!" }),
+      listMessages: vi.fn().mockResolvedValue({
+        messages: [
+          {
+            role: "human",
+            content: "Fix the race",
+            timestamp: "2026-08-16T10:00:00.000Z",
+          },
+          {
+            role: "agent",
+            content: "Fixed in PR #12",
+            timestamp: "2026-08-16T10:01:00.000Z",
+          },
+        ],
+      }),
     });
     const output = await new ClaudeAdapter(port).getOutput("sess_1");
     expect(output.sessionId).toBe("sess_1");
     expect(output.vendor).toBe("claude");
-    expect(output.messages).toHaveLength(1);
-    expect(output.messages[0].role).toBe("agent");
-    expect(output.messages[0].content).toBe("Done!");
+    expect(output.messages).toHaveLength(2);
+    expect(output.messages[0]).toMatchObject({ role: "human", content: "Fix the race" });
+    expect(output.messages[1]).toMatchObject({ role: "agent", content: "Fixed in PR #12" });
+    expect(port.getStatus).not.toHaveBeenCalled();
   });
 
-  it("returns empty messages when no summary", async () => {
+  it("returns empty messages when the transcript is empty", async () => {
     const port = fakePort({
-      getStatus: vi.fn().mockResolvedValue({ status: "running" }),
+      listMessages: vi.fn().mockResolvedValue({ messages: [] }),
     });
     const output = await new ClaudeAdapter(port).getOutput("sess_1");
     expect(output.messages).toHaveLength(0);
