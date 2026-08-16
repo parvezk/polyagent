@@ -52,13 +52,15 @@ export class ClaudeAdapter implements AgentAdapter {
   }
 
   async getOutput(sessionId: string): Promise<AgentOutput> {
-    const result = await this.port.getStatus(sessionId);
+    const { messages } = await this.port.listMessages(sessionId);
     return {
       sessionId,
       vendor: this.vendor,
-      messages: result.summary
-        ? [{ role: "agent", content: result.summary, timestamp: new Date() }]
-        : [],
+      messages: messages.map((m) => ({
+        role: m.role,
+        content: m.content,
+        timestamp: new Date(m.timestamp),
+      })),
     };
   }
 

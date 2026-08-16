@@ -12,6 +12,20 @@ import { labelFromPrompt } from "../utils/text.js";
 
 export type ClaudeSessionStatus = "idle" | "running" | "rescheduling" | "terminated";
 
+function textFromBlocks(content: Array<{ type: string; text?: string }> | undefined): string {
+  if (!content?.length) return "";
+  return content
+    .filter((b) => b.type === "text")
+    .map((b) => b.text ?? "")
+    .join("");
+}
+
+export interface ClaudeConversationMessage {
+  role: "agent" | "human";
+  content: string;
+  timestamp: string;
+}
+
 export interface ClaudePort {
   createSession(i: {
     prompt: string;
@@ -19,6 +33,9 @@ export interface ClaudePort {
   }): Promise<{ sessionId: string; firstReply: string; status: ClaudeSessionStatus }>;
 
   getStatus(sessionId: string): Promise<{ status: ClaudeSessionStatus; summary?: string }>;
+
+  /** Persisted session transcript (user + agent messages) for drawer / getOutput. */
+  listMessages(sessionId: string): Promise<{ messages: ClaudeConversationMessage[] }>;
 
   /** V3: send a follow-up message to a running session. Implemented but not exercised by unit tests. */
   sendEvent(sessionId: string, message: string): Promise<void>;
@@ -103,7 +120,56 @@ export function realClaudePort(apiKey: string): ClaudePort {
 
     async getStatus(sessionId) {
       const s = await client.beta.sessions.retrieve(sessionId);
-      return { status: (s.status as ClaudeSessionStatus) ?? "running" };
+      let summary: string | undefined;
+      try {
+        // Newest agent.message only — status polling should stay cheap.
+        const page = await client.beta.sessions.events.list(sessionId, {
+          types: ["agent.message"],
+          order: "desc",
+          limit: 1,
+        });
+        const latest = page.getPaginatedItems()[0] as
+          | { type?: string; content?: Array<{ type: string; text?: string }> }
+          | undefined;
+        const text = latest?.type === "agent.message" ? textFromBlocks(latest.content) : "";
+        summary = text || undefined;
+      } catch {
+        // Status is still useful when the events endpoint is unavailable.
+      }
+      return {
+        status: (s.status as ClaudeSessionStatus) ?? "running",
+        summary,
+      };
+    },
+
+    async listMessages(sessionId) {
+      const messages: ClaudeConversationMessage[] = [];
+      for await (const event of client.beta.sessions.events.list(sessionId, {
+        types: ["user.message", "agent.message"],
+        order: "asc",
+      })) {
+        const typed = event as {
+          type: string;
+          content?: Array<{ type: string; text?: string }>;
+          processed_at?: string | null;
+        };
+        const content = textFromBlocks(typed.content);
+        if (!content) continue;
+        if (typed.type === "agent.message") {
+          messages.push({
+            role: "agent",
+            content,
+            timestamp: typed.processed_at ?? new Date().toISOString(),
+          });
+        } else if (typed.type === "user.message") {
+          messages.push({
+            role: "human",
+            content,
+            timestamp: typed.processed_at ?? new Date().toISOString(),
+          });
+        }
+      }
+      return { messages };
     },
 
     async sendEvent(sessionId, message) {

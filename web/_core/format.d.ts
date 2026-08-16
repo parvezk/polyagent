@@ -8,16 +8,13 @@ export declare function truncate(s: string, max: number): string;
  */
 export declare function colorStatus(status: string, tick?: number): string;
 export interface StatusRow {
-  vendor: string;
-  id: string;
-  label: string;
-  status: string;
-  lastUpdate: string;
+    vendor: string;
+    id: string;
+    label: string;
+    status: string;
+    lastUpdate: string;
 }
-export declare function renderTable(
-  rows: StatusRow[],
-  opts?: {
+export declare function renderTable(rows: StatusRow[], opts?: {
     color?: boolean;
     tick?: number;
-  },
-): string;
+}): string;

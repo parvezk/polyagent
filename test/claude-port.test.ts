@@ -8,6 +8,7 @@ const anthropicSdk = vi.hoisted(() => ({
   createEnvironment: vi.fn(),
   createSession: vi.fn(),
   retrieveSession: vi.fn(),
+  listEvents: vi.fn(),
   streamEvents: vi.fn(),
   sendEvents: vi.fn(),
 }));
@@ -21,6 +22,7 @@ vi.mock("@anthropic-ai/sdk", () => ({
         create: anthropicSdk.createSession,
         retrieve: anthropicSdk.retrieveSession,
         events: {
+          list: anthropicSdk.listEvents,
           stream: anthropicSdk.streamEvents,
           send: anthropicSdk.sendEvents,
         },
@@ -36,6 +38,15 @@ vi.mock("@anthropic-ai/sdk", () => ({
 function eventStream(events: unknown[]): AsyncIterable<unknown> {
   return {
     async *[Symbol.asyncIterator]() {
+      for (const event of events) yield event;
+    },
+  };
+}
+
+function eventPage(events: unknown[]) {
+  return {
+    getPaginatedItems: () => events,
+    [Symbol.asyncIterator]: async function* () {
       for (const event of events) yield event;
     },
   };
@@ -125,11 +136,83 @@ describe("realClaudePort", () => {
 
   it("defaults a missing SDK session status to running", async () => {
     anthropicSdk.retrieveSession.mockResolvedValue({});
+    anthropicSdk.listEvents.mockResolvedValue(eventPage([]));
 
     await expect(realClaudePort("test-api-key").getStatus("session-123")).resolves.toEqual({
       status: "running",
     });
     expect(anthropicSdk.retrieveSession).toHaveBeenCalledWith("session-123");
+  });
+
+  it("includes the latest agent.message text as summary", async () => {
+    anthropicSdk.retrieveSession.mockResolvedValue({ status: "idle" });
+    anthropicSdk.listEvents.mockResolvedValue(
+      eventPage([
+        {
+          type: "agent.message",
+          content: [{ type: "text", text: "Opened the PR." }],
+          processed_at: "2026-08-16T11:00:00.000Z",
+        },
+      ]),
+    );
+
+    await expect(realClaudePort("test-api-key").getStatus("session-123")).resolves.toEqual({
+      status: "idle",
+      summary: "Opened the PR.",
+    });
+    expect(anthropicSdk.listEvents).toHaveBeenCalledWith("session-123", {
+      types: ["agent.message"],
+      order: "desc",
+      limit: 1,
+    });
+  });
+
+  it("still returns status when listing events fails", async () => {
+    anthropicSdk.retrieveSession.mockResolvedValue({ status: "running" });
+    anthropicSdk.listEvents.mockRejectedValue(new Error("events unavailable"));
+
+    await expect(realClaudePort("test-api-key").getStatus("session-123")).resolves.toEqual({
+      status: "running",
+    });
+  });
+
+  it("lists chronological user and agent messages for getOutput", async () => {
+    anthropicSdk.listEvents.mockReturnValue(
+      eventStream([
+        {
+          type: "user.message",
+          content: [{ type: "text", text: "Please continue" }],
+          processed_at: "2026-08-16T10:00:00.000Z",
+        },
+        {
+          type: "agent.message",
+          content: [
+            { type: "text", text: "Done " },
+            { type: "text", text: "now." },
+          ],
+          processed_at: "2026-08-16T10:01:00.000Z",
+        },
+      ]),
+    );
+
+    await expect(realClaudePort("test-api-key").listMessages("session-123")).resolves.toEqual({
+      messages: [
+        {
+          role: "human",
+          content: "Please continue",
+          timestamp: "2026-08-16T10:00:00.000Z",
+        },
+        {
+          role: "agent",
+          content: "Done now.",
+          timestamp: "2026-08-16T10:01:00.000Z",
+        },
+      ],
+    });
+    expect(anthropicSdk.listEvents).toHaveBeenCalledWith("session-123", {
+      types: ["user.message", "agent.message"],
+      order: "asc",
+    });
   });
 
   it("sends a follow-up as a user message to the requested session", async () => {
