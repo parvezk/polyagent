@@ -114,6 +114,68 @@ async function resolveGithubSource(
   return { sourceName, startingBranch };
 }
 
+/** Jules Activity resource (v1alpha) — union field names from the public API. */
+interface JulesActivity {
+  originator?: string;
+  description?: string;
+  createTime?: string;
+  agentMessaged?: { agentMessage?: string };
+  userMessaged?: { userMessage?: string };
+  progressUpdated?: { title?: string; description?: string };
+  planGenerated?: {
+    plan?: { steps?: { title?: string; description?: string }[] };
+  };
+  sessionFailed?: { reason?: string };
+  // Legacy / mistaken flat fields — keep mapping so older fixtures still work.
+  role?: string;
+  author?: string;
+  content?: string;
+  message?: string;
+  timestamp?: string;
+}
+
+function mapJulesActivity(
+  a: JulesActivity,
+): { role: "agent" | "human"; content: string; timestamp: string } | null {
+  const timestamp = a.createTime ?? a.timestamp ?? new Date().toISOString();
+
+  if (a.userMessaged?.userMessage) {
+    return { role: "human", content: a.userMessaged.userMessage, timestamp };
+  }
+  if (a.agentMessaged?.agentMessage) {
+    return { role: "agent", content: a.agentMessaged.agentMessage, timestamp };
+  }
+  if (a.progressUpdated) {
+    const content = [a.progressUpdated.title, a.progressUpdated.description]
+      .filter(Boolean)
+      .join(": ");
+    if (content) return { role: "agent", content, timestamp };
+  }
+  if (a.planGenerated?.plan?.steps?.length) {
+    const content = a.planGenerated.plan.steps
+      .map((s, i) => {
+        const body = [s.title, s.description].filter(Boolean).join(" — ");
+        return body ? `${i + 1}. ${body}` : null;
+      })
+      .filter(Boolean)
+      .join("\n");
+    if (content) return { role: "agent", content: `Plan:\n${content}`, timestamp };
+  }
+  if (a.sessionFailed?.reason) {
+    return { role: "agent", content: a.sessionFailed.reason, timestamp };
+  }
+
+  const legacyContent = a.content ?? a.message ?? "";
+  if (legacyContent) {
+    const origin = (a.role ?? a.author ?? a.originator ?? "agent").toLowerCase();
+    const role =
+      origin.startsWith("human") || origin.startsWith("user") ? "human" : "agent";
+    return { role, content: legacyContent, timestamp };
+  }
+
+  return null;
+}
+
 class RealJulesPortImpl implements JulesPort {
   constructor(private apiKey: string) {}
 
@@ -181,25 +243,29 @@ class RealJulesPortImpl implements JulesPort {
   async listActivities(sessionId: string): Promise<{
     messages: { role: "agent" | "human"; content: string; timestamp: string }[];
   }> {
-    const resp = (await julesRequest(this.apiKey, "GET", `/sessions/${sessionId}/activities`)) as {
-      activities?: {
-        role?: string;
-        author?: string;
-        content?: string;
-        message?: string;
-        timestamp?: string;
-        createTime?: string;
-      }[];
-    };
+    // Jules Activity uses originator + a typed union (agentMessaged / userMessaged / …),
+    // not flat role/content fields. Paginate — default pageSize is 50.
+    const messages: { role: "agent" | "human"; content: string; timestamp: string }[] = [];
+    let pageToken: string | undefined;
 
-    const messages = (resp.activities ?? []).map((a) => ({
-      role: ((a.role ?? a.author ?? "agent").toLowerCase().startsWith("human") ||
-      (a.role ?? a.author ?? "").toLowerCase().startsWith("user")
-        ? "human"
-        : "agent") as "agent" | "human",
-      content: a.content ?? a.message ?? "",
-      timestamp: a.timestamp ?? a.createTime ?? new Date().toISOString(),
-    }));
+    do {
+      const qs = new URLSearchParams({ pageSize: "100" });
+      if (pageToken) qs.set("pageToken", pageToken);
+      const resp = (await julesRequest(
+        this.apiKey,
+        "GET",
+        `/sessions/${sessionId}/activities?${qs}`,
+      )) as {
+        activities?: JulesActivity[];
+        nextPageToken?: string;
+      };
+
+      for (const activity of resp.activities ?? []) {
+        const mapped = mapJulesActivity(activity);
+        if (mapped) messages.push(mapped);
+      }
+      pageToken = resp.nextPageToken || undefined;
+    } while (pageToken);
 
     return { messages };
   }
