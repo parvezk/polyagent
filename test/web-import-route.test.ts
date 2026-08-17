@@ -48,6 +48,14 @@ const sessions: AgentSession[] = [
   },
 ];
 
+function deferred(): { promise: Promise<void>; resolve: () => void } {
+  let resolve!: () => void;
+  const promise = new Promise<void>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
+}
+
 describe("POST /api/import", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -79,7 +87,7 @@ describe("POST /api/import", () => {
     expect(dependencies.upsertSessions).not.toHaveBeenCalled();
   });
 
-  it("maps user-scoped rows and persists them in one bulk operation", async () => {
+  it("maps user-scoped rows and persists a small import in one bulk operation", async () => {
     const response = await POST();
 
     expect(dependencies.statePaths).toEqual(["/home/test/.polyagent/state.json"]);
@@ -113,6 +121,53 @@ describe("POST /api/import", () => {
     ]);
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ imported: 2 });
+  });
+
+  it("splits large imports into ordered sequential batches of at most 100 rows", async () => {
+    const largeImport = Array.from(
+      { length: 201 },
+      (_, index): AgentSession => ({
+        id: `session-${index + 1}`,
+        vendor: "claude",
+        status: "running",
+        dispatchedAt: "2026-07-11T12:00:00.000Z",
+      }),
+    );
+    const rows = largeImport.map((session) => ({ id: `row-for-${session.id}` }));
+    const rowBySessionId = new Map(largeImport.map((session, index) => [session.id, rows[index]]));
+    dependencies.list.mockReturnValue(largeImport);
+    dependencies.toDbRow.mockImplementation((session: AgentSession) =>
+      rowBySessionId.get(session.id),
+    );
+    const firstBatch = deferred();
+    const secondBatch = deferred();
+    const thirdBatch = deferred();
+    dependencies.upsertSessions
+      .mockImplementationOnce(() => firstBatch.promise)
+      .mockImplementationOnce(() => secondBatch.promise)
+      .mockImplementationOnce(() => thirdBatch.promise);
+
+    const responsePromise = POST();
+    const responseResolved = vi.fn();
+    void responsePromise.then(responseResolved);
+
+    await vi.waitFor(() => expect(dependencies.upsertSessions).toHaveBeenCalledTimes(1));
+    expect(dependencies.toDbRow).toHaveBeenCalledTimes(201);
+    expect(dependencies.upsertSessions).toHaveBeenLastCalledWith(rows.slice(0, 100));
+
+    firstBatch.resolve();
+    await vi.waitFor(() => expect(dependencies.upsertSessions).toHaveBeenCalledTimes(2));
+    expect(dependencies.upsertSessions).toHaveBeenLastCalledWith(rows.slice(100, 200));
+
+    secondBatch.resolve();
+    await vi.waitFor(() => expect(dependencies.upsertSessions).toHaveBeenCalledTimes(3));
+    expect(dependencies.upsertSessions).toHaveBeenLastCalledWith(rows.slice(200));
+    expect(responseResolved).not.toHaveBeenCalled();
+
+    thirdBatch.resolve();
+    const response = await responsePromise;
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ imported: 201 });
   });
 
   it("skips database work when local state is empty", async () => {
