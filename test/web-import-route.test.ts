@@ -126,9 +126,7 @@ describe("POST /api/import", () => {
       }),
     );
     const rows = largeImport.map((session) => ({ id: `row-for-${session.id}` }));
-    const rowBySessionId = new Map(
-      largeImport.map((session, index) => [session.id, rows[index]]),
-    );
+    const rowBySessionId = new Map(largeImport.map((session, index) => [session.id, rows[index]]));
     dependencies.list.mockReturnValue(largeImport);
     dependencies.toDbRow.mockImplementation((session: AgentSession) =>
       rowBySessionId.get(session.id),
