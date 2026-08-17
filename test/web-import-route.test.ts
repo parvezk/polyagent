@@ -151,8 +151,8 @@ describe("POST /api/import", () => {
     const responseResolved = vi.fn();
     void responsePromise.then(responseResolved);
 
-    expect(dependencies.toDbRow).toHaveBeenCalledTimes(201);
     await vi.waitFor(() => expect(dependencies.upsertSessions).toHaveBeenCalledTimes(1));
+    expect(dependencies.toDbRow).toHaveBeenCalledTimes(201);
     expect(dependencies.upsertSessions).toHaveBeenLastCalledWith(rows.slice(0, 100));
 
     firstBatch.resolve();
