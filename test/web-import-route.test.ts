@@ -123,7 +123,7 @@ describe("POST /api/import", () => {
     await expect(response.json()).resolves.toEqual({ imported: 2 });
   });
 
-  it("splits large imports into ordered batches of at most 100 rows", async () => {
+  it("splits large imports into ordered sequential batches of at most 100 rows", async () => {
     const largeImport = Array.from(
       { length: 201 },
       (_, index): AgentSession => ({
