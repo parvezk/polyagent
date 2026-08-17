@@ -48,6 +48,14 @@ const sessions: AgentSession[] = [
   },
 ];
 
+function deferred(): { promise: Promise<void>; resolve: () => void } {
+  let resolve!: () => void;
+  const promise = new Promise<void>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
+}
+
 describe("POST /api/import", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -131,15 +139,33 @@ describe("POST /api/import", () => {
     dependencies.toDbRow.mockImplementation((session: AgentSession) =>
       rowBySessionId.get(session.id),
     );
+    const firstBatch = deferred();
+    const secondBatch = deferred();
+    const thirdBatch = deferred();
+    dependencies.upsertSessions
+      .mockImplementationOnce(() => firstBatch.promise)
+      .mockImplementationOnce(() => secondBatch.promise)
+      .mockImplementationOnce(() => thirdBatch.promise);
 
-    const response = await POST();
+    const responsePromise = POST();
+    const responseResolved = vi.fn();
+    void responsePromise.then(responseResolved);
 
     expect(dependencies.toDbRow).toHaveBeenCalledTimes(201);
-    expect(dependencies.upsertSessions.mock.calls).toEqual([
-      [rows.slice(0, 100)],
-      [rows.slice(100, 200)],
-      [rows.slice(200)],
-    ]);
+    await vi.waitFor(() => expect(dependencies.upsertSessions).toHaveBeenCalledTimes(1));
+    expect(dependencies.upsertSessions).toHaveBeenLastCalledWith(rows.slice(0, 100));
+
+    firstBatch.resolve();
+    await vi.waitFor(() => expect(dependencies.upsertSessions).toHaveBeenCalledTimes(2));
+    expect(dependencies.upsertSessions).toHaveBeenLastCalledWith(rows.slice(100, 200));
+
+    secondBatch.resolve();
+    await vi.waitFor(() => expect(dependencies.upsertSessions).toHaveBeenCalledTimes(3));
+    expect(dependencies.upsertSessions).toHaveBeenLastCalledWith(rows.slice(200));
+    expect(responseResolved).not.toHaveBeenCalled();
+
+    thirdBatch.resolve();
+    const response = await responsePromise;
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ imported: 201 });
   });
