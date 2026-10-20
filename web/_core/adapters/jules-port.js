@@ -32,6 +32,22 @@ async function julesRequest(apiKey, method, path, body) {
   }
   return res.json();
 }
+/**
+ * List every Jules source, following nextPageToken.
+ * GET /sources defaults to pageSize 30 — a single page silently drops later repos.
+ */
+async function listAllSources(apiKey) {
+  const sources = [];
+  let pageToken;
+  do {
+    const qs = new URLSearchParams({ pageSize: "100" });
+    if (pageToken) qs.set("pageToken", pageToken);
+    const resp = await julesRequest(apiKey, "GET", `/sources?${qs}`);
+    sources.push(...(resp.sources ?? []));
+    pageToken = resp.nextPageToken || undefined;
+  } while (pageToken);
+  return sources;
+}
 export function realJulesPort(apiKey) {
   return {
     async createSession(i) {
@@ -40,11 +56,9 @@ export function realJulesPort(apiKey) {
       if (i.repo) {
         // Resolve the source for this GitHub repo. A session can only target a
         // repo that is registered as a Jules source (the Jules GitHub App must
-        // be installed AND the repo selected in Jules). GET /v1alpha/sources
-        // returns { sources: [{ name, githubRepo: { owner, repo, defaultBranch:{displayName} } }] }.
-        const sourcesResp = await julesRequest(apiKey, "GET", "/sources");
+        // be installed AND the repo selected in Jules).
+        const sources = await listAllSources(apiKey);
         const [owner, repo] = i.repo.split("/");
-        const sources = sourcesResp.sources ?? [];
         const found = sources.find(
           (s) =>
             s.githubRepo?.owner.toLowerCase() === owner?.toLowerCase() &&
@@ -114,8 +128,8 @@ export function realJulesPort(apiKey) {
       });
     },
     async listSources() {
-      const resp = await julesRequest(apiKey, "GET", "/sources");
-      return (resp.sources ?? [])
+      const sources = await listAllSources(apiKey);
+      return sources
         .filter((s) => s.githubRepo)
         .map((s) => ({
           repo: `${s.githubRepo.owner}/${s.githubRepo.repo}`,
