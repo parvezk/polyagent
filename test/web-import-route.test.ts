@@ -124,4 +124,41 @@ describe("POST /api/import", () => {
     expect(dependencies.upsertSessions).not.toHaveBeenCalled();
     await expect(response.json()).resolves.toEqual({ imported: 0 });
   });
+
+  it("reports partial progress when a later batch fails after earlier batches committed", async () => {
+    const largeImport = Array.from(
+      { length: 201 },
+      (_, index): AgentSession => ({
+        id: `session-${index + 1}`,
+        vendor: "claude",
+        status: "running",
+        dispatchedAt: "2026-07-11T12:00:00.000Z",
+      }),
+    );
+    dependencies.list.mockReturnValue(largeImport);
+    dependencies.upsertSessions
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error("payload too large"));
+
+    const response = await POST();
+
+    expect(dependencies.upsertSessions).toHaveBeenCalledTimes(2);
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({
+      imported: 100,
+      error: "Import failed after 100 of 201 sessions: payload too large",
+    });
+  });
+
+  it("returns imported 0 without a success count when the first batch fails", async () => {
+    dependencies.upsertSessions.mockRejectedValueOnce(new Error("database unavailable"));
+
+    const response = await POST();
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toEqual({
+      imported: 0,
+      error: "database unavailable",
+    });
+  });
 });
