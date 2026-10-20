@@ -12,24 +12,43 @@ export async function POST() {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  let imported = 0;
+  let fileSessions;
   try {
-    const fileSessions = new StateStore(STATE_PATH).list();
-    if (fileSessions.length > 0) {
-      const rows = fileSessions.map((s) => toDbRow(s, userId));
-
-      // ⚡ Bolt: Batch database upserts to avoid payload limits and memory spikes on large state files.
-      // This trades a single massive payload for a sequence of smaller ones, ensuring stability
-      // and preventing the endpoint from crashing or being rejected by the database on large imports.
-      const BATCH_SIZE = 100;
-      for (let i = 0; i < rows.length; i += BATCH_SIZE) {
-        await upsertSessions(rows.slice(i, i + BATCH_SIZE));
-      }
-
-      imported = rows.length;
-    }
+    fileSessions = new StateStore(STATE_PATH).list();
   } catch {
     // no state file (e.g. on Vercel) — nothing to import
+    return NextResponse.json({ imported: 0 });
+  }
+
+  if (fileSessions.length === 0) {
+    return NextResponse.json({ imported: 0 });
+  }
+
+  const rows = fileSessions.map((s) => toDbRow(s, userId));
+
+  // Batch upserts to avoid payload limits on large state files. Each successful
+  // batch is committed independently — count as we go so a mid-import failure
+  // cannot report imported:0 after rows already landed in the DB.
+  const BATCH_SIZE = 100;
+  let imported = 0;
+  try {
+    for (let i = 0; i < rows.length; i += BATCH_SIZE) {
+      const batch = rows.slice(i, i + BATCH_SIZE);
+      await upsertSessions(batch);
+      imported += batch.length;
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return NextResponse.json(
+      {
+        imported,
+        error:
+          imported > 0
+            ? `Import failed after ${imported} of ${rows.length} sessions: ${message}`
+            : message,
+      },
+      { status: 500 },
+    );
   }
 
   return NextResponse.json({ imported });

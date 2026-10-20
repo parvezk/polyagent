@@ -73,6 +73,37 @@ async function julesRequest(
   return res.json();
 }
 
+type JulesSource = {
+  name: string;
+  githubRepo?: {
+    owner: string;
+    repo: string;
+    defaultBranch?: { displayName?: string };
+  };
+};
+
+/**
+ * List every Jules source, following nextPageToken.
+ * GET /sources defaults to pageSize 30 — a single page silently drops later repos.
+ */
+async function listAllSources(apiKey: string): Promise<JulesSource[]> {
+  const sources: JulesSource[] = [];
+  let pageToken: string | undefined;
+
+  do {
+    const qs = new URLSearchParams({ pageSize: "100" });
+    if (pageToken) qs.set("pageToken", pageToken);
+    const resp = (await julesRequest(apiKey, "GET", `/sources?${qs}`)) as {
+      sources?: JulesSource[];
+      nextPageToken?: string;
+    };
+    sources.push(...(resp.sources ?? []));
+    pageToken = resp.nextPageToken || undefined;
+  } while (pageToken);
+
+  return sources;
+}
+
 /**
  * Resolves the source for a GitHub repo by looking it up in the list of Jules sources.
  * A session can only target a repo that is registered as a Jules source (the Jules
@@ -83,18 +114,8 @@ async function resolveGithubSource(
   repoParam: string,
   providedBranch: string | undefined,
 ): Promise<{ sourceName: string; startingBranch: string | undefined }> {
-  const sourcesResp = (await julesRequest(apiKey, "GET", "/sources")) as {
-    sources?: {
-      name: string;
-      githubRepo?: {
-        owner: string;
-        repo: string;
-        defaultBranch?: { displayName?: string };
-      };
-    }[];
-  };
+  const sources = await listAllSources(apiKey);
   const [owner, repo] = repoParam.toLowerCase().split("/");
-  const sources = sourcesResp.sources ?? [];
   const found = sources.find(
     ({ githubRepo }) =>
       githubRepo?.owner.toLowerCase() === owner && githubRepo?.repo.toLowerCase() === repo,
@@ -211,12 +232,8 @@ class RealJulesPortImpl implements JulesPort {
   }
 
   async listSources(): Promise<{ repo: string; defaultBranch?: string }[]> {
-    const resp = (await julesRequest(this.apiKey, "GET", "/sources")) as {
-      sources?: {
-        githubRepo?: { owner: string; repo: string; defaultBranch?: { displayName?: string } };
-      }[];
-    };
-    return (resp.sources ?? [])
+    const sources = await listAllSources(this.apiKey);
+    return sources
       .filter((s) => s.githubRepo)
       .map((s) => ({
         repo: `${s.githubRepo!.owner}/${s.githubRepo!.repo}`,

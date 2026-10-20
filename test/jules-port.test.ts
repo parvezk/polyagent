@@ -58,7 +58,7 @@ describe("realJulesPort.createSession", () => {
     expect(result).toEqual({ sessionId: "session-123", state: "IN_PROGRESS" });
     expect(fetchMock).toHaveBeenNthCalledWith(
       1,
-      `${JULES_API_BASE}/sources`,
+      `${JULES_API_BASE}/sources?pageSize=100`,
       expect.objectContaining({ method: "GET" }),
     );
 
@@ -125,6 +125,104 @@ describe("realJulesPort.createSession", () => {
       'Jules has no source for "parvezk/polyagent". Install the Jules GitHub App and select the repo in Jules. Available: other/registered-repo',
     );
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("pages through Jules sources so repos beyond the first page can still dispatch", async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        jsonResponse({
+          sources: [
+            {
+              name: "sources/page-1",
+              githubRepo: {
+                owner: "org",
+                repo: "first-page-repo",
+                defaultBranch: { displayName: "main" },
+              },
+            },
+          ],
+          nextPageToken: "page-2",
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          sources: [
+            {
+              name: "sources/page-2-target",
+              githubRepo: {
+                owner: "parvezk",
+                repo: "polyagent",
+                defaultBranch: { displayName: "develop" },
+              },
+            },
+          ],
+        }),
+      )
+      .mockResolvedValueOnce(jsonResponse({ id: "session-paginated", state: "QUEUED" }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await realJulesPort("test-api-key").createSession({
+      prompt: "Use a repo from page two",
+      repo: "parvezk/polyagent",
+    });
+
+    expect(result).toEqual({ sessionId: "session-paginated", state: "QUEUED" });
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      `${JULES_API_BASE}/sources?pageSize=100`,
+      expect.objectContaining({ method: "GET" }),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      2,
+      `${JULES_API_BASE}/sources?pageSize=100&pageToken=page-2`,
+      expect.objectContaining({ method: "GET" }),
+    );
+    expect(JSON.parse(String(fetchMock.mock.calls[2]?.[1]?.body)).sourceContext).toEqual({
+      source: "sources/page-2-target",
+      githubRepoContext: { startingBranch: "develop" },
+    });
+  });
+});
+
+describe("realJulesPort.listSources", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("aggregates every page of connected GitHub sources", async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        jsonResponse({
+          sources: [
+            {
+              name: "sources/a",
+              githubRepo: { owner: "org", repo: "alpha", defaultBranch: { displayName: "main" } },
+            },
+          ],
+          nextPageToken: "more",
+        }),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          sources: [
+            {
+              name: "sources/b",
+              githubRepo: { owner: "org", repo: "beta", defaultBranch: { displayName: "master" } },
+            },
+          ],
+        }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const sources = await realJulesPort("test-api-key").listSources();
+
+    expect(sources).toEqual([
+      { repo: "org/alpha", defaultBranch: "main" },
+      { repo: "org/beta", defaultBranch: "master" },
+    ]);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });
 
