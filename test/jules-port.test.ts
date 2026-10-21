@@ -128,6 +128,34 @@ describe("realJulesPort.createSession", () => {
   });
 });
 
+describe("realJulesPort.sendMessage", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("accepts an empty success body without throwing", async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValueOnce(
+      new Response("", {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      realJulesPort("test-api-key").sendMessage("session-123", "Please continue"),
+    ).resolves.toBeUndefined();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      `${JULES_API_BASE}/sessions/session-123:sendMessage`,
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ prompt: "Please continue" }),
+      }),
+    );
+  });
+});
+
 describe("realJulesPort.getSession", () => {
   afterEach(() => {
     vi.unstubAllGlobals();

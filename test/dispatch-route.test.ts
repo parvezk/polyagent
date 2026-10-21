@@ -97,6 +97,7 @@ describe("POST /api/dispatch", () => {
         vendor: "claude",
         prompt: "Fix auth",
         repo: "acme/app",
+        branch: "feature/auth",
         model: "claude-sonnet-4-20250514",
       }),
     );
@@ -105,6 +106,7 @@ describe("POST /api/dispatch", () => {
     expect(fakes.dispatch).toHaveBeenCalledWith({
       prompt: "Fix auth",
       repo: "acme/app",
+      branch: "feature/auth",
       model: "claude-sonnet-4-20250514",
     });
     expect(fakes.toDbRow).toHaveBeenCalledWith(session, "user-123");
