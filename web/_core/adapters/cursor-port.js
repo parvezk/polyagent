@@ -11,10 +11,9 @@ import { DEFAULT_CURSOR_MODEL } from "../constants/cursor.js";
 //   task stated: Agent.create({ apiKey, prompt, model, cloud })
 //   actual:      Agent.create({ apiKey, model, cloud }) then agent.send(prompt)
 //
-// LIVE-GATE UNCERTAINTY for sendFollowup:
-//   Agent.get() returns SDKAgentInfo (metadata). Whether that object exposes
-//   a .send() method at runtime is unverified — see cast below.
-//   Alternative: re-create with Agent.create({ agentId, apiKey, model, cloud }).
+// sendFollowup must use Agent.resume(), which returns an SDKAgent with .send().
+// Agent.get() only returns SDKAgentInfo metadata (no .send) — calling .send on
+// it throws at runtime and the follow-up never reaches the agent.
 // ---------------------------------------------------------------------------
 export function realCursorPort(apiKey) {
   return {
@@ -48,11 +47,9 @@ export function realCursorPort(apiKey) {
       };
     },
     async sendFollowup(agentId, message) {
-      // Per task: Agent.get(agentId, { apiKey }) then agent.send(message).
-      // SDKAgentInfo returned by Agent.get may not type-expose .send() —
-      // cast to handle this; confirm at the live gate.
+      // Agent.resume returns a live SDKAgent handle; Agent.get is metadata-only.
       const { Agent } = await import("@cursor/sdk");
-      const agent = await Agent.get(agentId, { apiKey });
+      const agent = await Agent.resume(agentId, { apiKey });
       await agent.send(message);
     },
   };

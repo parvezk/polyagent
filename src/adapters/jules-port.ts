@@ -70,7 +70,11 @@ async function julesRequest(
     throw new Error(`Jules API ${method} ${path} → ${res.status}: ${text}`);
   }
 
-  return res.json();
+  // sendMessage (and some other RPCs) return an empty body on success — res.json()
+  // would throw "Unexpected end of JSON input" after the server already accepted.
+  const text = await res.text();
+  if (!text.trim()) return undefined;
+  return JSON.parse(text) as unknown;
 }
 
 /**

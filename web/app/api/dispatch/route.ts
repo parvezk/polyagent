@@ -4,21 +4,27 @@ import { currentUserId, toDbRow, upsertSession } from "@/lib/sessions-store";
 
 export const dynamic = "force-dynamic";
 
-// POST /api/dispatch — { vendor, prompt, repo?, model? }
+// POST /api/dispatch — { vendor, prompt, repo?, branch?, model? }
 export async function POST(req: Request) {
   const userId = await currentUserId();
   if (!userId) {
     return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  let body: { vendor?: Vendor; prompt?: string; repo?: string; model?: string };
+  let body: {
+    vendor?: Vendor;
+    prompt?: string;
+    repo?: string;
+    branch?: string;
+    model?: string;
+  };
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { vendor, prompt, repo, model } = body;
+  const { vendor, prompt, repo, branch, model } = body;
   if (!vendor || !prompt) {
     return NextResponse.json({ error: "vendor and prompt are required" }, { status: 400 });
   }
@@ -27,7 +33,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const session = await buildAdapter(vendor).dispatch({ prompt, repo, model });
+    const session = await buildAdapter(vendor).dispatch({ prompt, repo, branch, model });
     await upsertSession(toDbRow(session, userId));
     return NextResponse.json({ session });
   } catch (err) {

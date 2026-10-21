@@ -3,6 +3,7 @@ import { realCursorPort } from "../src/adapters/cursor-port.js";
 
 const cursorSdk = vi.hoisted(() => ({
   get: vi.fn(),
+  resume: vi.fn(),
   getRun: vi.fn(),
   listRuns: vi.fn(),
 }));
@@ -13,6 +14,23 @@ vi.mock("@cursor/sdk", () => ({
 
 afterEach(() => {
   vi.clearAllMocks();
+});
+
+describe("realCursorPort.sendFollowup", () => {
+  it("resumes a live agent handle instead of metadata-only Agent.get", async () => {
+    const send = vi.fn().mockResolvedValue({ status: "running" });
+    cursorSdk.resume.mockResolvedValueOnce({ send });
+
+    await realCursorPort("cursor-api-key").sendFollowup("agent-123", "Also fix tests");
+
+    expect(cursorSdk.resume).toHaveBeenCalledOnce();
+    expect(cursorSdk.resume).toHaveBeenCalledWith("agent-123", {
+      apiKey: "cursor-api-key",
+    });
+    expect(cursorSdk.get).not.toHaveBeenCalled();
+    expect(send).toHaveBeenCalledOnce();
+    expect(send).toHaveBeenCalledWith("Also fix tests");
+  });
 });
 
 describe("realCursorPort.getLatestRunStatus", () => {
