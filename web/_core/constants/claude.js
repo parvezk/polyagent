@@ -13,5 +13,4 @@ export const CLAUDE_AGENT_TOOLSET = "agent_toolset_20260401";
  * only coding), so this stays vendor/task-agnostic. Override later via config
  * or a per-dispatch system prompt if needed.
  */
-export const DEFAULT_AGENT_SYSTEM_PROMPT =
-  "You are an autonomous agent operating within PolyAgent. Complete the task you are given and report the outcome clearly.";
+export const DEFAULT_AGENT_SYSTEM_PROMPT = "You are an autonomous agent operating within PolyAgent. Complete the task you are given and report the outcome clearly.";

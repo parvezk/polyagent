@@ -62,7 +62,7 @@ export async function upsertSession(row: DbSession): Promise<void> {
 
 export async function patchSession(
   id: string,
-  patch: Partial<Pick<DbSession, "status" | "last_polled">>,
+  patch: Partial<Pick<DbSession, "status" | "last_polled" | "output_url">>,
 ): Promise<void> {
   const supabase = await createClient();
   await supabase.from("sessions").update(patch).eq("id", id);

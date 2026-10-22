@@ -43,6 +43,21 @@ describe("JulesAdapter", () => {
     expect(status.needsInput).toBe(false);
   });
 
+  it("getStatus forwards pullRequestUrl as outputUrl", async () => {
+    const adapter = new JulesAdapter(
+      fakePort({
+        getSession: async (_id) => ({
+          state: "COMPLETED" as JulesState,
+          pullRequestUrl: "https://github.com/acme/app/pull/7",
+        }),
+      }),
+    );
+    const status = await adapter.getStatus("jules_1");
+
+    expect(status.status).toBe("completed");
+    expect(status.outputUrl).toBe("https://github.com/acme/app/pull/7");
+  });
+
   it("getStatus maps FAILED to failed", async () => {
     const adapter = new JulesAdapter(
       fakePort({ getSession: async (_id) => ({ state: "FAILED" as JulesState }) }),

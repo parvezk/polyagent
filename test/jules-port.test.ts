@@ -148,6 +148,7 @@ describe("realJulesPort.getSession", () => {
     expect(result).toEqual({
       state: "AWAITING_USER_FEEDBACK",
       lastMessage: "Which database should I use?",
+      pullRequestUrl: undefined,
     });
     expect(fetchMock).toHaveBeenCalledWith(`${JULES_API_BASE}/sessions/session-123`, {
       method: "GET",
@@ -177,6 +178,7 @@ describe("realJulesPort.getSession", () => {
     expect(result).toEqual({
       state: "IN_PROGRESS",
       lastMessage: "Latest agent update",
+      pullRequestUrl: undefined,
     });
   });
 
@@ -188,6 +190,33 @@ describe("realJulesPort.getSession", () => {
     expect(result).toEqual({
       state: "QUEUED",
       lastMessage: undefined,
+      pullRequestUrl: undefined,
+    });
+  });
+
+  it("surfaces the AUTO_CREATE_PR pull request URL from session outputs", async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValueOnce(
+      jsonResponse({
+        state: "COMPLETED",
+        outputs: [
+          { pullRequest: { title: "no url yet" } },
+          {
+            pullRequest: {
+              url: "https://github.com/myorg/myrepo/pull/42",
+              title: "Fix import flow",
+            },
+          },
+        ],
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await realJulesPort("test-api-key").getSession("session-pr");
+
+    expect(result).toEqual({
+      state: "COMPLETED",
+      lastMessage: undefined,
+      pullRequestUrl: "https://github.com/myorg/myrepo/pull/42",
     });
   });
 });

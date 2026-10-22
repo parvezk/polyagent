@@ -27,12 +27,13 @@ export class JulesAdapter implements AgentAdapter {
 
   async getStatus(sessionId: string): Promise<AgentStatus> {
     try {
-      const { state, lastMessage } = await this.port.getSession(sessionId);
+      const { state, lastMessage, pullRequestUrl } = await this.port.getSession(sessionId);
       return {
         status: normalizeSessionStatus(state),
         lastUpdate: new Date(),
         summary: lastMessage,
         needsInput: state.startsWith("AWAITING"),
+        outputUrl: pullRequestUrl,
       };
     } catch {
       return {

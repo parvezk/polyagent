@@ -26,7 +26,13 @@ async function collectRows(store: StateStore, sessionId?: string): Promise<Statu
           const live = await buildAdapter(s.vendor).getStatus(s.id);
           status = live.status;
           updatedAt = live.lastUpdate.toISOString();
-          toSave.push({ ...s, status: live.status, lastPolled: updatedAt });
+          toSave.push({
+            ...s,
+            status: live.status,
+            lastPolled: updatedAt,
+            // Capture Jules AUTO_CREATE_PR URL on the poll that observes completion.
+            outputUrl: live.outputUrl ?? s.outputUrl,
+          });
         } catch {
           // keep last-known status
         }

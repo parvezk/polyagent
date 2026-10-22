@@ -18,7 +18,12 @@ export interface JulesPort {
     title?: string;
   }): Promise<{ sessionId: string; state: JulesState }>;
 
-  getSession(sessionId: string): Promise<{ state: JulesState; lastMessage?: string }>;
+  getSession(sessionId: string): Promise<{
+    state: JulesState;
+    lastMessage?: string;
+    /** PR URL from Session.outputs[].pullRequest when AUTO_CREATE_PR produced one. */
+    pullRequestUrl?: string;
+  }>;
 
   listActivities(sessionId: string): Promise<{
     messages: { role: "agent" | "human"; content: string; timestamp: string }[];
@@ -159,11 +164,16 @@ class RealJulesPortImpl implements JulesPort {
     };
   }
 
-  async getSession(sessionId: string): Promise<{ state: JulesState; lastMessage?: string }> {
+  async getSession(sessionId: string): Promise<{
+    state: JulesState;
+    lastMessage?: string;
+    pullRequestUrl?: string;
+  }> {
     const session = (await julesRequest(this.apiKey, "GET", `/sessions/${sessionId}`)) as {
       state?: JulesState;
       lastMessage?: string;
       messages?: { role: string; content: string }[];
+      outputs?: { pullRequest?: { url?: string } }[];
     };
 
     let lastMessage: string | undefined = session.lastMessage;
@@ -172,9 +182,12 @@ class RealJulesPortImpl implements JulesPort {
       lastMessage = agentMsgs[agentMsgs.length - 1]?.content;
     }
 
+    const pullRequestUrl = session.outputs?.map((o) => o.pullRequest?.url).find((url) => !!url);
+
     return {
       state: session.state ?? "QUEUED",
       lastMessage,
+      pullRequestUrl,
     };
   }
 

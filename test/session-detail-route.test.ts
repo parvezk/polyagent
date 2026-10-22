@@ -171,4 +171,39 @@ describe("GET /api/sessions/[id]", () => {
       last_polled: "2026-08-01T11:30:00.000Z",
     });
   });
+
+  it("backfills and returns a Jules PR URL for a completed session missing output_url", async () => {
+    const completedWithoutPr = {
+      ...storedSession,
+      status: "completed",
+      output_url: null,
+      last_polled: "2026-08-01T11:00:00.000Z",
+    };
+    const getStatus = vi.fn().mockResolvedValue({
+      status: "completed",
+      lastUpdate: new Date("2026-08-01T11:05:00.000Z"),
+      summary: "PR opened",
+      needsInput: false,
+      outputUrl: "https://github.com/acme/app/pull/42",
+    });
+    const getOutput = vi.fn().mockResolvedValue({
+      sessionId: completedWithoutPr.id,
+      vendor: "jules",
+      messages: [],
+    });
+    getSessionMock.mockResolvedValue(completedWithoutPr);
+    buildAdapterMock.mockReturnValue({ getStatus, getOutput });
+
+    const response = await getDetail();
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(getStatus).toHaveBeenCalledWith(completedWithoutPr.id);
+    expect(patchSessionMock).toHaveBeenCalledWith(completedWithoutPr.id, {
+      status: "completed",
+      last_polled: "2026-08-01T11:05:00.000Z",
+      output_url: "https://github.com/acme/app/pull/42",
+    });
+    expect(body.session.outputUrl).toBe("https://github.com/acme/app/pull/42");
+  });
 });
