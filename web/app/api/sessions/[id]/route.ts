@@ -15,20 +15,31 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   const adapter = buildAdapter(session.vendor);
   let status = session.status;
   let summary: string | undefined;
+  let outputUrl = session.output_url ?? undefined;
   let messages: { role: string; content: string; timestamp: string }[] = [];
 
-  // ⚡ Bolt: Skip status polling for terminal sessions (they don't change state)
-  if (status !== "completed" && status !== "failed") {
+  // Skip status polling for terminal sessions, except Jules backfill when the
+  // AUTO_CREATE_PR URL was never persisted onto the row.
+  const needsPoll =
+    (status !== "completed" && status !== "failed") ||
+    (session.vendor === "jules" && !session.output_url);
+  if (needsPoll) {
     try {
       const live = await adapter.getStatus(id);
       const liveLastUpdate = live.lastUpdate.toISOString();
       status = live.status;
       summary = live.summary;
-      if (
+      if (live.outputUrl) outputUrl = live.outputUrl;
+      const statusChanged =
         status !== session.status ||
-        liveLastUpdate !== (session.last_polled ?? session.dispatched_at)
-      ) {
-        await patchSession(id, { status, last_polled: liveLastUpdate });
+        liveLastUpdate !== (session.last_polled ?? session.dispatched_at);
+      const outputChanged = !!live.outputUrl && live.outputUrl !== session.output_url;
+      if (statusChanged || outputChanged) {
+        await patchSession(id, {
+          status,
+          last_polled: liveLastUpdate,
+          ...(live.outputUrl ? { output_url: live.outputUrl } : {}),
+        });
       }
     } catch {
       /* keep last-known */
@@ -54,7 +65,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
       status,
       dispatchedAt: session.dispatched_at,
       lastUpdate: session.last_polled ?? session.dispatched_at,
-      outputUrl: session.output_url ?? undefined,
+      outputUrl,
     },
     summary,
     firstMessage: session.first_message ?? undefined,

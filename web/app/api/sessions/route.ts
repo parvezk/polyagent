@@ -26,30 +26,36 @@ export async function GET() {
         let status = s.status;
         let lastUpdate = s.last_polled ?? s.dispatched_at;
         let summary: string | undefined;
+        let outputUrl = s.output_url ?? undefined;
 
         // Skip polling terminal sessions to avoid unnecessary vendor calls and DB writes.
         if (status !== "completed" && status !== "failed") {
           try {
             const live = await buildAdapter(s.vendor).getStatus(s.id);
             const liveLastUpdate = live.lastUpdate.toISOString();
+            summary = live.summary;
+            if (live.outputUrl) outputUrl = live.outputUrl;
 
-            // Persist only status changes or the first successful poll timestamp.
-            if (status !== live.status || s.last_polled === null) {
+            // Persist status changes, first poll timestamp, or a newly discovered PR URL.
+            const statusChanged = status !== live.status || s.last_polled === null;
+            const outputChanged = !!live.outputUrl && live.outputUrl !== s.output_url;
+            if (statusChanged || outputChanged) {
               status = live.status;
               lastUpdate = liveLastUpdate;
-              summary = live.summary;
 
               patchPromises.push(
                 (async () => {
                   try {
-                    await patchSession(s.id, { status, last_polled: lastUpdate });
+                    await patchSession(s.id, {
+                      status,
+                      last_polled: lastUpdate,
+                      ...(live.outputUrl ? { output_url: live.outputUrl } : {}),
+                    });
                   } catch (e) {
                     console.error("Failed to patch session:", e);
                   }
                 })(),
               );
-            } else {
-              summary = live.summary;
             }
           } catch {
             // keep last-known status
@@ -64,7 +70,7 @@ export async function GET() {
           dispatchedAt: s.dispatched_at,
           lastUpdate,
           summary,
-          outputUrl: s.output_url ?? undefined,
+          outputUrl,
           firstMessage: s.first_message ?? undefined,
         };
       }),

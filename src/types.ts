@@ -18,6 +18,8 @@ export interface AgentStatus {
   lastUpdate: Date;
   summary?: string;
   needsInput: boolean;
+  /** Vendor output link discovered while polling (e.g. Jules PR URL). */
+  outputUrl?: string;
 }
 
 export interface AgentOutput {
