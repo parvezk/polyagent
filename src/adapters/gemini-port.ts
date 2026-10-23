@@ -35,9 +35,8 @@ export interface GeminiPort {
 
   /**
    * Send a follow-up message, continuing from a previous interaction.
-   * Maps to: POST /interactions with previous_interaction_id.
-   * ASSUMPTION: the environment_id from the original interaction is NOT threaded through here —
-   * the API docs show previous_interaction_id alone is sufficient to continue context.
+   * Maps to: POST /interactions with previous_interaction_id and the prior environment_id
+   * (passed as `environment`) so the remote sandbox is reused.
    */
   sendFollowup(interactionId: string, message: string): Promise<void>;
 }
@@ -45,6 +44,53 @@ export interface GeminiPort {
 // ---------------------------------------------------------------------------
 // Internal helpers
 // ---------------------------------------------------------------------------
+
+type GeminiContentPart = { type?: string; text?: string };
+type GeminiStep = { type?: string; content?: GeminiContentPart[] };
+
+interface GeminiInteractionResponse {
+  id?: string;
+  status?: GeminiInteractionStatus;
+  /** SDK-only convenience field — absent from raw REST JSON. */
+  output_text?: string;
+  environment_id?: string;
+  steps?: GeminiStep[];
+}
+
+/**
+ * Mirror the GenAI SDK's `output_text` sugar: scan backwards across steps for
+ * the latest contiguous `model_output` text blocks (stopping at `user_input`).
+ * Raw REST responses only expose `steps`, not `output_text`.
+ */
+export function extractGeminiOutputText(resp: {
+  output_text?: string;
+  steps?: GeminiStep[];
+}): string | undefined {
+  if (resp.output_text) return resp.output_text;
+
+  const steps = resp.steps ?? [];
+  const textParts: string[] = [];
+  let collecting = false;
+  outer: for (let i = steps.length - 1; i >= 0; i--) {
+    const step = steps[i]!;
+    if (step.type === "user_input") break;
+    if (step.type !== "model_output" || !step.content) {
+      if (collecting) break outer;
+      continue;
+    }
+    for (let j = step.content.length - 1; j >= 0; j--) {
+      const item = step.content[j]!;
+      if (item.type === "text") {
+        collecting = true;
+        textParts.push(item.text ?? "");
+      } else if (collecting) {
+        break outer;
+      }
+    }
+  }
+  const text = textParts.reverse().join("");
+  return text || undefined;
+}
 
 async function geminiRequest(
   apiKey: string,
@@ -89,42 +135,52 @@ export function realGeminiPort(apiKey: string): GeminiPort {
         input: [{ type: "text", text: prompt }],
         environment: "remote",
         background: true,
-      })) as {
-        id?: string;
-        status?: GeminiInteractionStatus;
-        output_text?: string;
-      };
+      })) as GeminiInteractionResponse;
 
       return {
         // CONFIRMED: response field is "id" (not "interactionId")
         interactionId: resp.id ?? "",
         status: resp.status ?? "in_progress",
-        // output_text may be populated if background=false or task completes instantly
-        firstReply: resp.output_text || undefined,
+        // REST returns text under steps[]; output_text is SDK sugar only
+        firstReply: extractGeminiOutputText(resp),
       };
     },
 
     async getStatus(interactionId) {
       // CONFIRMED: GET /interactions/{id} returns same shape as POST response
-      const resp = (await geminiRequest(apiKey, "GET", `/interactions/${interactionId}`)) as {
-        status?: GeminiInteractionStatus;
-        output_text?: string;
-      };
+      const resp = (await geminiRequest(
+        apiKey,
+        "GET",
+        `/interactions/${interactionId}`,
+      )) as GeminiInteractionResponse;
 
       return {
         status: resp.status ?? "in_progress",
-        summary: resp.output_text || undefined,
+        summary: extractGeminiOutputText(resp),
       };
     },
 
     async sendFollowup(interactionId, message) {
-      // CONFIRMED: previous_interaction_id threads conversation context
-      // ASSUMPTION: reuses the same default agent; for production you'd pass environment_id to
-      // reuse the exact sandbox, but that requires storing it at dispatch time.
+      // CONFIRMED (managed-agents quickstart): conversation and environment are
+      // independent. previous_interaction_id alone keeps chat history but
+      // environment:"remote" provisions a *new* workspace. Reuse the prior
+      // environment_id by passing it as `environment`.
+      const prior = (await geminiRequest(
+        apiKey,
+        "GET",
+        `/interactions/${interactionId}`,
+      )) as GeminiInteractionResponse;
+
+      if (!prior.environment_id) {
+        throw new Error(
+          `Gemini interaction ${interactionId} has no environment_id; cannot reuse sandbox for follow-up`,
+        );
+      }
+
       await geminiRequest(apiKey, "POST", "/interactions", {
         agent: ANTIGRAVITY_AGENT,
         input: [{ type: "text", text: message }],
-        environment: "remote",
+        environment: prior.environment_id,
         background: true,
         previous_interaction_id: interactionId,
       });
