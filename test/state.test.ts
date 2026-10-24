@@ -1,5 +1,12 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { chmodSync, mkdtempSync, statSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { StateStore } from "../src/state.js";
@@ -96,5 +103,22 @@ describe("StateStore", () => {
     const reloaded = new StateStore(join(dir, "state.json"));
     expect(reloaded.list()).toHaveLength(3);
     expect(reloaded.get("a")?.status).toBe("completed");
+  });
+
+  it("save leaves no .tmp sibling and keeps valid JSON on disk", () => {
+    const path = join(dir, "state.json");
+    const store = new StateStore(path);
+    store.upsert(makeSession("a"));
+
+    expect(existsSync(`${path}.${process.pid}.tmp`)).toBe(false);
+    expect(() => JSON.parse(readFileSync(path, "utf8"))).not.toThrow();
+    expect(JSON.parse(readFileSync(path, "utf8")).sessions).toHaveLength(1);
+  });
+
+  it("load throws a clear error when state.json is corrupt", () => {
+    const path = join(dir, "state.json");
+    writeFileSync(path, "{ truncated", { mode: 0o600 });
+
+    expect(() => new StateStore(path)).toThrow(/Corrupt state file/);
   });
 });
