@@ -15,6 +15,13 @@ export async function followupCommand(sessionId: string, message: string): Promi
 
   try {
     await buildAdapter(session.vendor).sendFollowup(sessionId, message);
+    // Terminal sessions are skipped by status polling; flip back to running so
+    // `polyagent status --watch` (and web import of this state) resume polling.
+    store.upsert({
+      ...session,
+      status: "running",
+      lastPolled: new Date().toISOString(),
+    });
     console.log(pc.green(`✓ Sent follow-up to ${session.vendor} session ${sessionId}`));
     console.log(pc.dim(`  Track with: polyagent status --watch`));
   } catch (err) {
