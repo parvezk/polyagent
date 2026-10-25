@@ -57,13 +57,28 @@ export function realCursorPort(apiKey: string): CursorPort {
         };
       };
 
+      // startingRef is optional on the Cloud Agents API — omit it so Cursor
+      // uses the repository default branch. Hardcoding "main" breaks repos
+      // whose default is master/develop/etc when the caller leaves branch blank.
+      // Omit repos entirely for no-repo agents (empty string would become
+      // https://github.com/ and fail or target nonsense).
+      const cloud: {
+        repos?: { url: string; startingRef?: string }[];
+        autoCreatePR: boolean;
+      } = { autoCreatePR: false };
+      if (i.repo) {
+        cloud.repos = [
+          {
+            url: `https://github.com/${i.repo}`,
+            ...(i.branch ? { startingRef: i.branch } : {}),
+          },
+        ];
+      }
+
       const agent = await Agent.create({
         apiKey,
         model: { id: i.modelId ?? DEFAULT_CURSOR_MODEL },
-        cloud: {
-          repos: [{ url: `https://github.com/${i.repo}`, startingRef: i.branch ?? "main" }],
-          autoCreatePR: false,
-        },
+        cloud,
       });
 
       // Send initial prompt to start the run (Agent.create has no prompt param).
