@@ -23,7 +23,7 @@ export interface GeminiPort {
    */
   createInteraction(i: {
     prompt: string;
-    /** Override default Antigravity agent. Accepts agent id like "antigravity-preview-05-2026". */
+    /** Override default Antigravity agent. Accepts agent id like "antigravity-preview-09-2026". */
     modelId?: string;
   }): Promise<{ interactionId: string; firstReply?: string; status: GeminiInteractionStatus }>;
 
