@@ -64,6 +64,8 @@ describe("realGeminiPort", () => {
     });
 
     const request = fetchMock.mock.calls[0];
+    // Pin the live managed-agent id so a shut-down default cannot silently return.
+    expect(ANTIGRAVITY_AGENT).toBe("antigravity-preview-09-2026");
     expect(JSON.parse(String(request?.[1]?.body)).agent).toBe(ANTIGRAVITY_AGENT);
   });
 
