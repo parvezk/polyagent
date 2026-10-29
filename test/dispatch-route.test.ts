@@ -123,7 +123,7 @@ describe("POST /api/dispatch", () => {
     expect(fakes.upsertSession).not.toHaveBeenCalled();
   });
 
-  it("returns a persistence error instead of reporting an untracked session", async () => {
+  it("returns the vendor session id when persistence fails after dispatch", async () => {
     const session = {
       id: "session-1",
       vendor: "claude",
@@ -137,5 +137,9 @@ describe("POST /api/dispatch", () => {
     const response = await POST(jsonRequest({ vendor: "claude", prompt: "Fix auth" }));
 
     expect(response.status).toBe(502);
+    await expect(response.json()).resolves.toEqual({
+      error: "Database unavailable",
+      session,
+    });
   });
 });
