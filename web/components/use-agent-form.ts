@@ -49,7 +49,17 @@ export function useAgentForm() {
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Launch failed");
+      if (!res.ok) {
+        // Persistence can fail after the vendor already created a billed session.
+        // Prefer surfacing that id over a bare error so the user can recover.
+        const orphanId = data.session?.id as string | undefined;
+        const base = data.error ?? "Launch failed";
+        throw new Error(
+          orphanId
+            ? `${base} — vendor session ${orphanId} was created; check the vendor dashboard`
+            : base,
+        );
+      }
       toast.success(`Launched ${VENDOR_META[vendor].label} · ${data.session.id}`);
       mutate("/api/sessions");
       setOpen(false);
