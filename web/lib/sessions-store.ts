@@ -14,6 +14,7 @@ export interface DbSession {
   first_message: string | null;
   dispatched_at: string;
   last_polled: string | null;
+  dismissed_at?: string | null; // set when hidden from the queue (migration 0002)
 }
 
 // Map a core AgentSession (from dispatch) to a DB row for the current user.
@@ -62,7 +63,7 @@ export async function upsertSession(row: DbSession): Promise<void> {
 
 export async function patchSession(
   id: string,
-  patch: Partial<Pick<DbSession, "status" | "last_polled">>,
+  patch: Partial<Pick<DbSession, "status" | "last_polled" | "dismissed_at">>,
 ): Promise<void> {
   const supabase = await createClient();
   await supabase.from("sessions").update(patch).eq("id", id);
@@ -72,5 +73,16 @@ export async function upsertSessions(rows: DbSession[]): Promise<void> {
   if (!rows || rows.length === 0) return;
   const supabase = await createClient();
   const { error } = await supabase.from("sessions").upsert(rows);
+  if (error) throw new Error(error.message);
+}
+
+// Hide a session from the queue. Unlike patchSession, throws on a Supabase error
+// (e.g. dismissed_at column missing because migration 0002 has not run).
+export async function dismissSession(id: string): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("sessions")
+    .update({ dismissed_at: new Date().toISOString() })
+    .eq("id", id);
   if (error) throw new Error(error.message);
 }
