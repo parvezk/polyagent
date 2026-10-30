@@ -3,6 +3,8 @@ import {
   groupFor,
   groupQueue,
   countQueue,
+  filterQueue,
+  vendorCounts,
   repoFromUrl,
   lastAgentMessage,
   type QueueItem,
@@ -77,5 +79,32 @@ describe("lastAgentMessage", () => {
   it("returns undefined when there is none", () => {
     expect(lastAgentMessage([{ role: "human", content: "hi" }])).toBeUndefined();
     expect(lastAgentMessage(undefined)).toBeUndefined();
+  });
+});
+
+describe("filterQueue / vendorCounts / sort by vendor", () => {
+  const items = [
+    item({ id: "c1", vendor: "cursor", lastUpdate: "2026-10-30T05:00:00.000Z" }),
+    item({ id: "a1", vendor: "claude", lastUpdate: "2026-10-30T01:00:00.000Z" }),
+    item({ id: "a2", vendor: "claude", lastUpdate: "2026-10-30T03:00:00.000Z" }),
+    item({ id: "g1", vendor: "gemini", lastUpdate: "2026-10-30T04:00:00.000Z" }),
+  ];
+
+  it("keeps everything when no vendor is chosen", () => {
+    expect(filterQueue(items, [])).toHaveLength(4);
+    expect(filterQueue(items, ["claude", "gemini"]).map((i) => i.id)).toEqual(["a1", "a2", "g1"]);
+  });
+
+  it("counts runs per vendor in name order", () => {
+    expect(vendorCounts(items)).toEqual([
+      { vendor: "claude", count: 2 },
+      { vendor: "cursor", count: 1 },
+      { vendor: "gemini", count: 1 },
+    ]);
+  });
+
+  it("sorts by vendor, then most recent", () => {
+    expect(groupQueue(items, "vendor").running.map((i) => i.id)).toEqual(["a2", "a1", "c1", "g1"]);
+    expect(groupQueue(items).running.map((i) => i.id)).toEqual(["c1", "g1", "a2", "a1"]);
   });
 });

@@ -1,4 +1,4 @@
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { QueueItem, QueueResponse } from "@/lib/queue";
 import { QueueView } from "./queue-view";
@@ -55,6 +55,7 @@ describe("QueueView", () => {
   });
 
   afterEach(() => {
+    window.localStorage.clear();
     cleanup();
     vi.clearAllMocks();
   });
@@ -72,7 +73,7 @@ describe("QueueView", () => {
     expect(useSWR).toHaveBeenCalledWith(
       "/api/queue",
       expect.any(Function),
-      expect.objectContaining({ refreshInterval: 30000 }),
+      expect.objectContaining({ refreshInterval: 15000 }),
     );
   });
 
@@ -115,5 +116,45 @@ describe("QueueView", () => {
     render(<QueueView />);
     expect(screen.getByText("No agent runs yet.")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Agents" }).getAttribute("href")).toBe("/");
+  });
+
+  it("filters by vendor", () => {
+    render(<QueueView />);
+
+    fireEvent.click(screen.getByRole("button", { name: /Cursor/ }));
+    expect(
+      within(screen.getByTestId("queue-group-waiting")).queryByText("Add retry to webhook handler"),
+    ).toBeNull();
+    expect(
+      within(screen.getByTestId("queue-group-running")).getByText("Upgrade eslint config"),
+    ).toBeTruthy();
+
+    fireEvent.click(screen.getByRole("button", { name: "All" }));
+    expect(screen.getByText("Add retry to webhook handler")).toBeTruthy();
+  });
+
+  it("collapses and expands a group", () => {
+    render(<QueueView />);
+
+    const toggle = screen.getByRole("button", { name: "Collapse Waiting on you" });
+    fireEvent.click(toggle);
+    expect(screen.queryByText("Add retry to webhook handler")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Expand Waiting on you" }));
+    expect(screen.getByText("Add retry to webhook handler")).toBeTruthy();
+  });
+
+  it("switches to the board view with one column per group", () => {
+    render(<QueueView />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Board" }));
+    for (const key of ["waiting", "review", "running", "failed"]) {
+      expect(screen.getByTestId(`queue-column-${key}`)).toBeTruthy();
+    }
+    expect(
+      within(screen.getByTestId("queue-column-waiting")).getByText("Add retry to webhook handler"),
+    ).toBeTruthy();
+    expect(
+      within(screen.getByTestId("queue-column-review")).getByText("No finished work to review."),
+    ).toBeTruthy();
   });
 });
