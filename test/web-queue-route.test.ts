@@ -206,6 +206,26 @@ describe("GET /api/queue", () => {
     expect(body.items[0].repo).toBe("acme/widgets");
   });
 
+  it("keeps other runs when one vendor's adapter cannot be built", async () => {
+    setup(
+      [
+        makeSession({ id: "ok", vendor: "claude" }),
+        makeSession({ id: "nokey", vendor: "jules", status: "completed", first_message: "Done" }),
+      ],
+      {},
+      { ok: [{ role: "agent", content: "Working" }] },
+    );
+    mocks.buildAdapter.mockImplementation((vendor: string) => {
+      if (vendor === "jules") throw new Error("Missing JULES_API_KEY");
+      return { getStatus: mocks.getStatus, getOutput: mocks.getOutput };
+    });
+
+    const items = byId(await fetchQueue());
+
+    expect(items.ok).toMatchObject({ group: "running", lastAgentMessage: "Working" });
+    expect(items.nokey).toMatchObject({ group: "review", lastAgentMessage: "Done" });
+  });
+
   it("returns an empty queue when listing sessions fails", async () => {
     mocks.listSessions.mockRejectedValue(new Error("not signed in"));
 

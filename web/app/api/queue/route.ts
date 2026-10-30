@@ -38,17 +38,26 @@ export async function GET() {
   const items = await Promise.all(
     visible.map((s) =>
       limit(async (): Promise<QueueItem> => {
-        const adapter = buildAdapter(s.vendor);
+        // buildAdapter throws when a vendor's key is missing; keep that run's stored state.
+        let adapter: ReturnType<typeof buildAdapter> | null = null;
+        try {
+          adapter = buildAdapter(s.vendor);
+        } catch {
+          adapter = null;
+        }
         let status = s.status as SessionStatus;
         let lastUpdate = s.last_polled ?? s.dispatched_at;
         let summary: string | undefined;
         let needsInput = false;
 
         // Status and output are independent; fetch them together.
-        const statusTask = isTerminal(s.status)
-          ? Promise.resolve(null) // terminal sessions don't change state; skip polling
-          : adapter.getStatus(s.id).catch(() => null); // keep last-known on error
-        const outputTask = adapter.getOutput(s.id).catch(() => null);
+        const statusTask =
+          !adapter || isTerminal(s.status)
+            ? Promise.resolve(null) // terminal sessions don't change state; skip polling
+            : adapter.getStatus(s.id).catch(() => null); // keep last-known on error
+        const outputTask = adapter
+          ? adapter.getOutput(s.id).catch(() => null)
+          : Promise.resolve(null);
         const [live, output] = await Promise.all([statusTask, outputTask]);
 
         if (live) {
