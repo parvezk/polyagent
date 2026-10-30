@@ -157,4 +157,18 @@ describe("QueueView", () => {
       within(screen.getByTestId("queue-column-review")).getByText("No finished work to review."),
     ).toBeTruthy();
   });
+
+  it("keeps board cards compact with a See more button", () => {
+    render(<QueueView />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Board" }));
+    const waiting = screen.getByTestId("queue-column-waiting");
+    expect(within(waiting).getByRole("button", { name: "Reply" })).toBeTruthy();
+    expect(within(waiting).queryByRole("link", { name: "Open" })).toBeNull();
+    expect(
+      within(waiting).getByRole("button", { name: "See more about Add retry to webhook handler" }),
+    ).toBeTruthy();
+    const running = screen.getByTestId("queue-column-running");
+    expect(within(running).queryByRole("button", { name: "Reply" })).toBeNull();
+  });
 });

@@ -50,7 +50,7 @@ function SessionDrawerContent({ session }: { session: SessionView }) {
       refreshInterval: (currentData) =>
         getSessionDetailRefreshInterval({
           initialStatus: session?.status,
-          refreshedStatus: currentData?.session.status,
+          refreshedStatus: currentData?.session?.status,
         }),
     },
   );
@@ -96,7 +96,19 @@ function SessionDrawerContent({ session }: { session: SessionView }) {
         <SheetTitle className="text-left text-base font-normal text-zinc-200">
           {currentSession.label}
         </SheetTitle>
-        <p className="font-mono text-[11px] text-zinc-600">{currentSession.id}</p>
+        <div className="flex items-center gap-3">
+          <p className="truncate font-mono text-[11px] text-zinc-600">{currentSession.id}</p>
+          {currentSession.outputUrl && (
+            <a
+              href={currentSession.outputUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="ml-auto shrink-0 text-xs text-zinc-400 underline underline-offset-4 hover:text-zinc-200"
+            >
+              Open link
+            </a>
+          )}
+        </div>
       </SheetHeader>
 
       <div className="flex-1 space-y-3 overflow-y-auto px-1 py-4">

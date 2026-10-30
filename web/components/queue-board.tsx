@@ -14,10 +14,11 @@ interface QueueBoardProps {
   grouped: Record<QueueGroup, QueueItem[]>;
   onDismiss: (id: string) => Promise<void> | void;
   onReplied: () => void;
+  onSeeMore: (item: QueueItem) => void;
 }
 
 // Board view: one column per group, left to right in queue order.
-export function QueueBoard({ grouped, onDismiss, onReplied }: QueueBoardProps) {
+export function QueueBoard({ grouped, onDismiss, onReplied, onSeeMore }: QueueBoardProps) {
   return (
     <div className="grid grid-cols-1 items-start gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
       {QUEUE_GROUPS.map((g) => {
@@ -52,6 +53,7 @@ export function QueueBoard({ grouped, onDismiss, onReplied }: QueueBoardProps) {
                     compact
                     onDismiss={onDismiss}
                     onReplied={onReplied}
+                    onSeeMore={onSeeMore}
                   />
                 ))}
               </ul>

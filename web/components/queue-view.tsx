@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { ChevronRight, Columns3, LayoutList, RotateCw } from "lucide-react";
 import { QueueBoard } from "@/components/queue-board";
 import { QueueCard } from "@/components/queue-card";
+import { SessionDrawer } from "@/components/session-drawer";
 import { useQueuePrefs, type QueueLayout } from "@/components/queue-prefs";
 import { QueueToolbar } from "@/components/queue-toolbar";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,7 @@ import {
   groupQueue,
   vendorCounts,
   type QueueGroup,
+  type QueueItem,
   type QueueResponse,
 } from "@/lib/queue";
 
@@ -45,6 +47,7 @@ export function QueueView() {
   const [refreshing, setRefreshing] = useState(false);
 
   const [prefs, setPrefs] = useQueuePrefs();
+  const [selected, setSelected] = useState<QueueItem | null>(null);
 
   const items = data?.items ?? [];
   const vendors = vendorCounts(items);
@@ -161,7 +164,12 @@ export function QueueView() {
             onSortChange={(sort) => setPrefs({ sort })}
           />
           {prefs.layout === "board" ? (
-            <QueueBoard grouped={grouped} onDismiss={dismiss} onReplied={() => void mutate()} />
+            <QueueBoard
+              grouped={grouped}
+              onDismiss={dismiss}
+              onReplied={() => void mutate()}
+              onSeeMore={setSelected}
+            />
           ) : (
             <div className="space-y-6">
               {QUEUE_GROUPS.map((g) => {
@@ -224,6 +232,11 @@ export function QueueView() {
           )}
         </>
       )}
+      <SessionDrawer
+        key={selected?.id ?? "closed"}
+        session={selected}
+        onClose={() => setSelected(null)}
+      />
     </div>
   );
 }

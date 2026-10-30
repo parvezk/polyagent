@@ -24,9 +24,17 @@ interface QueueCardProps {
   onReplied: () => void;
   // Board columns are narrow: stack the actions under the message.
   compact?: boolean;
+  // Opens the full session panel (board cards).
+  onSeeMore?: (item: QueueItem) => void;
 }
 
-export function QueueCard({ item, onDismiss, onReplied, compact = false }: QueueCardProps) {
+export function QueueCard({
+  item,
+  onDismiss,
+  onReplied,
+  compact = false,
+  onSeeMore,
+}: QueueCardProps) {
   const [replyOpen, setReplyOpen] = useState(false);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
@@ -96,7 +104,7 @@ export function QueueCard({ item, onDismiss, onReplied, compact = false }: Queue
           </p>
           {item.lastAgentMessage && (
             <p
-              className={`${compact ? "line-clamp-3" : "line-clamp-2"} text-sm leading-relaxed ${
+              className={`${compact ? "line-clamp-1 text-xs" : "line-clamp-2 text-sm"} leading-relaxed ${
                 waiting ? "text-zinc-300" : "text-zinc-500"
               }`}
             >
@@ -106,21 +114,34 @@ export function QueueCard({ item, onDismiss, onReplied, compact = false }: Queue
         </div>
 
         <div className="flex shrink-0 items-center gap-1.5 pt-0.5">
-          <Button
-            size="sm"
-            variant={waiting ? "default" : "outline"}
-            aria-expanded={replyOpen}
-            aria-controls={replyId}
-            onClick={() => setReplyOpen((v) => !v)}
-            className={
-              waiting
-                ? "bg-[#D97757] text-zinc-950 hover:bg-[#D97757]/85"
-                : "border-zinc-700 bg-transparent text-zinc-300 hover:bg-zinc-800"
-            }
-          >
-            Reply
-          </Button>
-          {item.outputUrl && (
+          {(!compact || waiting) && (
+            <Button
+              size="sm"
+              variant={waiting ? "default" : "outline"}
+              aria-expanded={replyOpen}
+              aria-controls={replyId}
+              onClick={() => setReplyOpen((v) => !v)}
+              className={
+                waiting
+                  ? "bg-[#D97757] text-zinc-950 hover:bg-[#D97757]/85"
+                  : "border-zinc-700 bg-transparent text-zinc-300 hover:bg-zinc-800"
+              }
+            >
+              Reply
+            </Button>
+          )}
+          {compact && onSeeMore && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onSeeMore(item)}
+              aria-label={`See more about ${task}`}
+              className="border-zinc-700 bg-transparent text-zinc-300 hover:bg-zinc-800"
+            >
+              See more
+            </Button>
+          )}
+          {item.outputUrl && !compact && (
             <a
               href={item.outputUrl}
               target="_blank"
