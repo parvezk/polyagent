@@ -36,13 +36,48 @@ export function emptyCounts(): Record<QueueGroup, number> {
   return { waiting: 0, review: 0, running: 0, failed: 0 };
 }
 
-// Group items in QUEUE_GROUPS order. Within a group, most recently updated first.
-export function groupQueue(items: QueueItem[]): Record<QueueGroup, QueueItem[]> {
+export type QueueSort = "recent" | "vendor";
+export type QueueVendor = QueueItem["vendor"];
+
+export const QUEUE_SORTS: { key: QueueSort; label: string }[] = [
+  { key: "recent", label: "Most recent" },
+  { key: "vendor", label: "Vendor" },
+];
+
+const byRecent = (a: QueueItem, b: QueueItem) =>
+  Date.parse(b.lastUpdate) - Date.parse(a.lastUpdate);
+
+export function compareQueueItems(sort: QueueSort) {
+  if (sort === "vendor") {
+    return (a: QueueItem, b: QueueItem) => a.vendor.localeCompare(b.vendor) || byRecent(a, b);
+  }
+  return byRecent;
+}
+
+// Keep only the chosen vendors. An empty list means every vendor.
+export function filterQueue(items: QueueItem[], vendors: readonly QueueVendor[]): QueueItem[] {
+  if (vendors.length === 0) return items;
+  return items.filter((i) => vendors.includes(i.vendor));
+}
+
+// Vendors present in the queue, with how many runs each has, in name order.
+export function vendorCounts(items: QueueItem[]): { vendor: QueueVendor; count: number }[] {
+  const counts = new Map<QueueVendor, number>();
+  for (const i of items) counts.set(i.vendor, (counts.get(i.vendor) ?? 0) + 1);
+  return [...counts.entries()]
+    .map(([vendor, count]) => ({ vendor, count }))
+    .sort((a, b) => a.vendor.localeCompare(b.vendor));
+}
+
+// Group items in QUEUE_GROUPS order. Within a group, most recent first unless sorted by vendor.
+export function groupQueue(
+  items: QueueItem[],
+  sort: QueueSort = "recent",
+): Record<QueueGroup, QueueItem[]> {
   const out: Record<QueueGroup, QueueItem[]> = { waiting: [], review: [], running: [], failed: [] };
   for (const item of items) out[item.group].push(item);
-  for (const key of Object.keys(out) as QueueGroup[]) {
-    out[key].sort((a, b) => Date.parse(b.lastUpdate) - Date.parse(a.lastUpdate));
-  }
+  const cmp = compareQueueItems(sort);
+  for (const key of Object.keys(out) as QueueGroup[]) out[key].sort(cmp);
   return out;
 }
 
