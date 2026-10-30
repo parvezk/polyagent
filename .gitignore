@@ -13,3 +13,10 @@ oss-strategy.md
 
 # Scratch/research docs stay local; ./plans (implementation plans) IS tracked.
 /docs/
+
+# Local-only materials (do not commit)
+/bak/
+/internal/
+.vercel
+
+/a16z-SR008
