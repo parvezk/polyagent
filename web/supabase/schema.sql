@@ -10,7 +10,8 @@ create table if not exists public.sessions (
   output_url    text,
   first_message text,
   dispatched_at timestamptz not null default now(),
-  last_polled   timestamptz
+  last_polled   timestamptz,
+  dismissed_at  timestamptz                       -- hidden from the queue
 );
 
 create index if not exists sessions_user_id_idx on public.sessions (user_id, dispatched_at desc);

@@ -5,6 +5,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { UserMenu } from "@/components/user-menu";
+import { NavLinks } from "@/components/nav-links";
 import { PostHogIdentify } from "@/components/posthog-identify";
 import { PostHogPageView } from "@/components/posthog-pageview";
 
@@ -29,8 +30,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           <div className="mx-auto flex max-w-[1100px] items-center gap-3 px-6 py-3">
             <span className="text-[#D97757]">◆</span>
             <span className="font-semibold tracking-tight">PolyAgent</span>
+            <span className="h-4 w-px bg-zinc-800" aria-hidden />
+            <NavLinks />
             <span className="hidden text-sm text-zinc-500 md:inline">
-              · Assemble the best team for every job — under one roof
+              · One queue for coding agents from any vendor
             </span>
             <div className="ml-auto">
               <UserMenu />
