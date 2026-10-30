@@ -20,3 +20,4 @@ oss-strategy.md
 .vercel
 
 /a16z-SR008
+.env*
