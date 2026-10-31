@@ -20,6 +20,14 @@ const Toaster = ({ ...props }: ToasterProps) => {
         error: glyph("✕"),
         loading: glyph("…"),
       }}
+      style={
+        {
+          "--normal-bg": "var(--ink)",
+          "--normal-text": "var(--on-ink)",
+          "--normal-border": "var(--ink)",
+          "--border-radius": "2px",
+        } as React.CSSProperties
+      }
       toastOptions={{
         duration: 5000,
         classNames: {
