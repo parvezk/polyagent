@@ -1,23 +1,20 @@
-import { VendorIcon, VENDOR_META } from "@/components/vendor-icon";
+import { VendorMark } from "@/components/vendor-icon";
 import { VENDORS } from "@/utils/constants";
 
-// Compact panel between the top bar and the table — what PolyAgent is + which
-// vendors you can orchestrate, visible the moment the site loads.
+// What PolyAgent is, and the vendors it drives, in one plain band under the header.
 export function VendorHero() {
   return (
-    <div className="rounded-xl border border-zinc-800 bg-zinc-900/40 px-5 py-4">
-      <p className="max-w-3xl text-sm leading-relaxed text-zinc-300">
-        A vendor-agnostic control plane for cloud coding agents. Dispatch and track agents across
-        vendors from <span className="text-zinc-100">one interface</span> — no tab-switching between
-        vendor dashboards, no lock-in, no context switching.
+    <div className="space-y-3 border-b border-rule pb-6">
+      <p className="max-w-[65ch] text-[15px] leading-[23px] text-ink">
+        One place to dispatch coding agents from any vendor and review what they did. No switching
+        between vendor dashboards, no lock-in.
       </p>
-      <div className="mt-3.5 flex flex-wrap items-center gap-x-5 gap-y-2">
-        <span className="text-xs uppercase tracking-wider text-zinc-600">Orchestrates</span>
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+        <span className="text-xs font-semibold uppercase tracking-[0.06em] text-ink-muted">
+          Orchestrates
+        </span>
         {VENDORS.map((v) => (
-          <span key={v} className="flex items-center gap-1.5 text-sm font-medium text-zinc-300">
-            <VendorIcon vendor={v} className="size-4" />
-            {VENDOR_META[v].label}
-          </span>
+          <VendorMark key={v} vendor={v} label />
         ))}
       </div>
     </div>

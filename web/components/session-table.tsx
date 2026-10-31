@@ -2,7 +2,7 @@
 
 import useSWR from "swr";
 import { StatusBadge } from "@/components/status-badge";
-import { VendorIcon, VENDOR_META } from "@/components/vendor-icon";
+import { VendorMark } from "@/components/vendor-icon";
 import { getSessionsRefreshInterval } from "@/lib/session-polling";
 import { relativeTime, type SessionView } from "@/lib/view";
 
@@ -16,33 +16,32 @@ export function SessionTable({ onSelect }: { onSelect: (s: SessionView) => void 
   const sessions = data?.sessions ?? [];
 
   if (isLoading && sessions.length === 0) {
-    return <div className="py-16 text-center text-sm text-zinc-500">Loading sessions…</div>;
+    return <div className="py-16 text-sm text-ink-muted">Loading sessions…</div>;
   }
 
   if (sessions.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed border-zinc-800 py-16 text-center">
-        <p className="text-sm text-zinc-400">No agents dispatched yet.</p>
-        <p className="mt-1 text-xs text-zinc-600">Hit “New Agent” to dispatch your first one.</p>
+      <div className="border-y border-rule py-16">
+        <p className="text-sm font-semibold text-ink">No agents dispatched yet.</p>
+        <p className="mt-1 text-sm text-ink-muted">Choose “New agent” to dispatch your first one.</p>
       </div>
     );
   }
 
   return (
-    <div className="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950/50">
+    <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-zinc-800 text-left text-xs uppercase tracking-wider text-zinc-500">
-            <th className="px-4 py-3 font-medium">#</th>
-            <th className="px-4 py-3 font-medium">Vendor</th>
-            <th className="px-4 py-3 font-medium">Task</th>
-            <th className="px-4 py-3 font-medium">Status</th>
-            <th className="px-4 py-3 font-medium">Updated</th>
+          <tr className="border-b border-ink text-left text-xs uppercase tracking-[0.06em] text-ink-muted">
+            <th className="py-2 pr-3 font-semibold">#</th>
+            <th className="py-2 pr-3 font-semibold">Vendor</th>
+            <th className="py-2 pr-3 font-semibold">Task</th>
+            <th className="py-2 pr-3 font-semibold">Status</th>
+            <th className="py-2 font-semibold">Updated</th>
           </tr>
         </thead>
         <tbody>
           {sessions.map((s, i) => {
-            const label = VENDOR_META[s.vendor]?.label ?? s.vendor;
             const needsYou = s.status === "needs_review";
             return (
               <tr
@@ -55,27 +54,24 @@ export function SessionTable({ onSelect }: { onSelect: (s: SessionView) => void 
                   }
                 }}
                 tabIndex={0}
-                className={`cursor-pointer border-b border-zinc-900 transition-colors hover:bg-zinc-900/60 focus-visible:bg-zinc-900/60 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-zinc-400 ${
-                  needsYou ? "bg-amber-400/[0.07] shadow-[inset_3px_0_0_0_rgb(251,191,36)]" : ""
+                className={`cursor-pointer border-b border-rule transition-colors hover:bg-paper-sunk focus-visible:bg-paper-sunk focus-visible:outline-2 focus-visible:-outline-offset-2 ${
+                  needsYou ? "shadow-[inset_4px_0_0_0_var(--highlight)]" : ""
                 }`}
               >
-                <td className="px-4 py-2.5 font-mono text-xs text-zinc-600">{i + 1}</td>
-                <td className="px-4 py-2.5">
-                  <span className="flex items-center gap-2 font-medium text-zinc-200">
-                    <VendorIcon vendor={s.vendor} className="size-4 shrink-0" />
-                    {label}
-                  </span>
+                <td className={`py-3 pr-3 font-mono text-xs text-ink-muted tabular-nums ${needsYou ? "pl-3" : ""}`}>{i + 1}</td>
+                <td className="py-3 pr-3">
+                  <VendorMark vendor={s.vendor} />
                 </td>
-                <td className="max-w-md px-4 py-2.5">
-                  <div className="truncate text-zinc-200">{s.label}</div>
-                  <div className="truncate font-mono text-[11px] text-zinc-600">
+                <td className="max-w-md py-3 pr-3">
+                  <div className="truncate font-semibold text-ink">{s.label}</div>
+                  <div className="truncate font-mono text-xs text-ink-muted">
                     {s.id.length > 32 ? s.id.slice(0, 32) + "…" : s.id}
                   </div>
                 </td>
-                <td className="px-4 py-2.5">
+                <td className="py-3 pr-3">
                   <StatusBadge status={s.status} />
                 </td>
-                <td className="whitespace-nowrap px-4 py-2.5 font-mono text-xs text-zinc-500">
+                <td className="whitespace-nowrap py-3 font-mono text-xs text-ink-muted tabular-nums">
                   {relativeTime(s.lastUpdate)}
                 </td>
               </tr>

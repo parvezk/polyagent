@@ -1,6 +1,7 @@
 // Client-safe view types + styling (no server/core imports — safe in client components).
 
-export type SessionStatus = "running" | "needs_review" | "completed" | "failed" | "unknown";
+// "sleep" is a long-running agent parked until its next wake (styled; vendors do not report it yet).
+export type SessionStatus = "running" | "needs_review" | "sleep" | "completed" | "failed" | "unknown";
 
 export interface SessionView {
   id: string;
@@ -14,14 +15,15 @@ export interface SessionView {
   firstMessage?: string;
 }
 
-// Status → Tailwind classes. needs_review is intentionally the loudest (gold + glow);
-// it's the actionable state. running pulses; the rest are calm.
-export const STATUS_STYLE: Record<SessionStatus, { dot: string; text: string; label: string }> = {
-  running: { dot: "bg-blue-400 animate-pulse", text: "text-blue-300", label: "running" },
-  needs_review: { dot: "bg-amber-400", text: "text-amber-300", label: "needs review" },
-  completed: { dot: "bg-emerald-400", text: "text-emerald-300", label: "completed" },
-  failed: { dot: "bg-red-400", text: "text-red-300", label: "failed" },
-  unknown: { dot: "bg-zinc-500", text: "text-zinc-400", label: "unknown" },
+// Status marks (design system: StatusMark). Every status shows a glyph and a word.
+// needs_review is a square highlighter band and running a filled pill; the rest are text.
+export const STATUS_STYLE: Record<SessionStatus, { glyph: string; className: string; label: string }> = {
+  needs_review: { glyph: "!", className: "bg-highlight px-1.5 py-0.5 text-on-highlight", label: "needs review" },
+  running: { glyph: "○", className: "rounded-full bg-running-fill px-2 py-0.5 text-on-running", label: "running" },
+  sleep: { glyph: "☾", className: "border border-dashed border-sleep px-1.5 py-px text-sleep", label: "sleep" },
+  completed: { glyph: "✓", className: "text-tick", label: "completed" },
+  failed: { glyph: "✕", className: "text-failed", label: "failed" },
+  unknown: { glyph: "–", className: "text-ink-muted", label: "unknown" },
 };
 
 export function relativeTime(iso: string): string {

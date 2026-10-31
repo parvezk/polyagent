@@ -3,11 +3,12 @@
 import { QueueCard } from "@/components/queue-card";
 import { QUEUE_GROUPS, type QueueGroup, type QueueItem } from "@/lib/queue";
 
-const COLUMN_TONE: Record<QueueGroup, { top: string; dot: string; title: string }> = {
-  waiting: { top: "border-t-amber-400", dot: "bg-amber-400", title: "text-amber-300" },
-  review: { top: "border-t-emerald-400", dot: "bg-emerald-400", title: "text-zinc-300" },
-  running: { top: "border-t-blue-400", dot: "bg-blue-400 animate-pulse", title: "text-zinc-300" },
-  failed: { top: "border-t-red-400", dot: "bg-red-400", title: "text-zinc-300" },
+// Column heads carry the StatusMark glyph; only "Waiting on you" gets the highlighter.
+const COLUMN_TONE: Record<QueueGroup, { glyph: string; title: string }> = {
+  waiting: { glyph: "!", title: "bg-highlight px-1 text-on-highlight" },
+  review: { glyph: "✓", title: "text-tick" },
+  running: { glyph: "○", title: "text-running" },
+  failed: { glyph: "✕", title: "text-failed" },
 };
 
 interface QueueBoardProps {
@@ -30,18 +31,20 @@ export function QueueBoard({ grouped, onDismiss, onReplied, onSeeMore }: QueueBo
             key={g.key}
             aria-labelledby={headingId}
             data-testid={headingId}
-            className={`flex min-w-0 flex-col gap-2 rounded-xl border border-t-2 border-zinc-800/80 bg-zinc-950/60 p-2.5 ${tone.top}`}
+            className="flex min-w-0 flex-col gap-2 border-t border-ink pt-2"
           >
             <h2
               id={headingId}
-              className="flex items-center gap-2 px-1 pb-1 pt-0.5 text-xs font-semibold uppercase tracking-wider"
+              className="flex items-center gap-2 pb-1 text-xs font-semibold uppercase tracking-[0.06em]"
             >
-              <span className={`size-2 rounded-full ${tone.dot}`} />
-              <span className={tone.title}>{g.label}</span>
-              <span className="font-mono font-normal text-zinc-500">{list.length}</span>
+              <span className={`inline-flex items-center gap-1 ${tone.title}`}>
+                <span aria-hidden className="font-mono">{tone.glyph}</span>
+                {g.label}
+              </span>
+              <span className="font-mono font-normal text-ink-muted">{list.length}</span>
             </h2>
             {list.length === 0 ? (
-              <p className="rounded-lg border border-dashed border-zinc-800 px-2 py-4 text-center text-xs text-zinc-600">
+              <p className="border border-dashed border-rule px-2 py-4 text-xs text-ink-muted">
                 {g.empty}
               </p>
             ) : (

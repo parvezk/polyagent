@@ -7,7 +7,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "@/components/status-badge";
-import { VendorIcon, VENDOR_META } from "@/components/vendor-icon";
+import { VendorMark } from "@/components/vendor-icon";
 import { getSessionDetailRefreshInterval } from "@/lib/session-polling";
 import { type SessionView } from "@/lib/view";
 import { getDraftAfterFailedFollowup } from "./session-drawer-followup";
@@ -31,7 +31,7 @@ export function SessionDrawer({
 }) {
   return (
     <Sheet open={!!session} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent className="flex w-full flex-col border-l-2 border-l-[#D97757]/40 bg-zinc-950 text-zinc-100 sm:max-w-xl">
+      <SheetContent className="flex w-full flex-col border-l border-l-ink bg-paper-raised text-ink sm:max-w-xl">
         {session && <SessionDrawerContent key={session.id} session={session} />}
       </SheetContent>
     </Sheet>
@@ -87,25 +87,24 @@ function SessionDrawerContent({ session }: { session: SessionView }) {
     <>
       <SheetHeader className="space-y-2">
         <div className="flex items-center gap-3">
-          <span className="flex items-center gap-2 text-sm font-semibold text-zinc-200">
-            <VendorIcon vendor={currentSession.vendor} className="size-4" />
-            {VENDOR_META[currentSession.vendor]?.label ?? currentSession.vendor}
+          <span className="text-sm">
+            <VendorMark vendor={currentSession.vendor} label />
           </span>
           <StatusBadge status={currentSession.status} />
         </div>
-        <SheetTitle className="text-left text-base font-normal text-zinc-200">
+        <SheetTitle className="text-left text-xl font-bold leading-[26px] text-ink">
           {currentSession.label}
         </SheetTitle>
         <div className="flex items-center gap-3">
-          <p className="truncate font-mono text-[11px] text-zinc-600">{currentSession.id}</p>
+          <p className="truncate font-mono text-xs text-ink-muted">{currentSession.id}</p>
           {currentSession.outputUrl && (
             <a
               href={currentSession.outputUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="ml-auto shrink-0 text-xs text-zinc-400 underline underline-offset-4 hover:text-zinc-200"
+              className="ml-auto shrink-0 text-xs font-semibold text-tick underline underline-offset-4"
             >
-              Open link
+              Open link ↗
             </a>
           )}
         </div>
@@ -122,13 +121,13 @@ function SessionDrawerContent({ session }: { session: SessionView }) {
           <Message key={`sent-${i}`} role="human" content={m} />
         ))}
         {!showFirstMessage && messages.length === 0 && sent.length === 0 && (
-          <p className="py-8 text-center text-xs text-zinc-600">
+          <p className="py-8 text-sm text-ink-muted">
             No output yet — the agent is working.
           </p>
         )}
       </div>
 
-      <div className="space-y-2 border-t border-zinc-800 pt-4">
+      <div className="space-y-2 border-t border-rule pt-4">
         <Textarea
           value={message}
           onChange={(e) => setMessage(e.target.value)}
@@ -142,12 +141,12 @@ function SessionDrawerContent({ session }: { session: SessionView }) {
           }}
           placeholder="Send a follow-up to steer the agent… (Press Enter to send)"
           aria-label="Follow-up message"
-          className="min-h-20 border-zinc-800 bg-zinc-900"
+          className="min-h-20 border-rule-strong bg-paper-raised"
         />
         <Button
           onClick={sendFollowup}
           disabled={sending || !message.trim()}
-          className="w-full bg-[#D97757] text-zinc-950 hover:bg-[#c8694a]"
+          className="w-full bg-ink text-on-ink hover:bg-ink/85"
         >
           {sending ? "Sending…" : "Send follow-up"}
         </Button>
@@ -160,13 +159,11 @@ function Message({ role, content }: { role: string; content: string }) {
   const isAgent = role === "agent";
   return (
     <div
-      className={`rounded-lg border px-3 py-2 text-sm ${
-        isAgent
-          ? "border-zinc-800 bg-zinc-900/50 text-zinc-200"
-          : "border-[#D97757]/40 bg-[#D97757]/10 text-orange-100"
+      className={`border-l-2 py-1 pl-3 text-sm leading-[21px] ${
+        isAgent ? "border-rule-strong text-ink" : "border-tick bg-paper-sunk text-ink"
       }`}
     >
-      <div className="mb-1 text-[10px] uppercase tracking-wider text-zinc-500">
+      <div className="mb-1 text-xs font-semibold uppercase tracking-[0.06em] text-ink-muted">
         {isAgent ? "agent" : "you"}
       </div>
       <div className="whitespace-pre-wrap">{content}</div>
