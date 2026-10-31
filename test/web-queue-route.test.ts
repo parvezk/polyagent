@@ -178,6 +178,23 @@ describe("GET /api/queue", () => {
     expect(mocks.patchSession).not.toHaveBeenCalled();
   });
 
+  it("keeps last-known status when the adapter soft-fails with unknown", async () => {
+    setup([makeSession({ id: "awaiting", status: "needs_review" })], {
+      awaiting: { status: "unknown" },
+    });
+
+    const body = await fetchQueue();
+
+    expect(body.items[0]).toMatchObject({
+      id: "awaiting",
+      status: "needs_review",
+      group: "waiting",
+      needsInput: false,
+      lastUpdate: "2026-10-30T00:00:03.000Z",
+    });
+    expect(mocks.patchSession).not.toHaveBeenCalled();
+  });
+
   it("patches the session when the live status changes", async () => {
     setup([makeSession({ id: "s1", status: "running" })], { s1: { status: "completed" } });
 
