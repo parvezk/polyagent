@@ -11,6 +11,7 @@ import {
   type QueueItem,
   type QueueResponse,
 } from "@/lib/queue";
+import { isPersistableLiveStatus } from "@/lib/session-polling";
 import type { SessionStatus } from "@/lib/view";
 
 export const dynamic = "force-dynamic"; // always fresh; never cache live status
@@ -60,7 +61,9 @@ export async function GET() {
           : Promise.resolve(null);
         const [live, output] = await Promise.all([statusTask, outputTask]);
 
-        if (live) {
+        // Adapters return "unknown" on vendor blips instead of throwing — do not
+        // persist or display that sentinel over the last real status.
+        if (live && isPersistableLiveStatus(live.status)) {
           summary = live.summary;
           needsInput = Boolean(live.needsInput);
           if (status !== live.status || s.last_polled === null) {
