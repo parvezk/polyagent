@@ -28,12 +28,12 @@ export function UserMenu() {
 
   return (
     <div className="flex items-center gap-3">
-      <span className="font-mono text-xs text-zinc-500">{email}</span>
+      <span className="font-mono text-xs text-ink-muted">{email}</span>
       <Button
         onClick={signOut}
         variant="outline"
         size="sm"
-        className="h-7 border-zinc-700 bg-transparent text-xs text-zinc-300 hover:bg-zinc-900"
+        className="h-7 border-rule-strong bg-transparent text-xs text-ink hover:bg-paper-sunk"
       >
         Sign out
       </Button>

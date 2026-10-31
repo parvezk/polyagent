@@ -32,12 +32,12 @@ async function fetcher(url: string): Promise<QueueResponse> {
   return d as QueueResponse;
 }
 
-// Per-group color: the dot by the heading and the count in the summary line.
-const GROUP_TONE: Record<QueueGroup, { dot: string; text: string }> = {
-  waiting: { dot: "bg-amber-400", text: "text-amber-300" },
-  review: { dot: "bg-emerald-400", text: "text-emerald-300" },
-  running: { dot: "bg-blue-400 animate-pulse", text: "text-blue-300" },
-  failed: { dot: "bg-red-400", text: "text-red-300" },
+// Per-group mark (design system: StatusMark): a glyph by the heading and the count's color.
+const GROUP_TONE: Record<QueueGroup, { glyph: string; text: string }> = {
+  waiting: { glyph: "!", text: "bg-highlight px-1 text-on-highlight" },
+  review: { glyph: "✓", text: "text-tick" },
+  running: { glyph: "○", text: "text-running" },
+  failed: { glyph: "✕", text: "text-failed" },
 };
 
 export function QueueView() {
@@ -99,16 +99,16 @@ export function QueueView() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-end justify-between gap-4">
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="space-y-2">
-          <h1 className="text-xl font-semibold">Queue</h1>
-          <p className="text-sm text-zinc-400">Every agent run, sorted by what needs you.</p>
+          <h1 className="text-[32px] font-bold leading-9 tracking-[-0.01em]">Queue</h1>
+          <p className="text-[15px] text-ink-muted">Every agent run, sorted by what needs you.</p>
           {data && (
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-0.5 font-mono text-sm">
               {QUEUE_GROUPS.map((g) => (
                 <span
                   key={g.key}
-                  className={counts[g.key] > 0 ? GROUP_TONE[g.key].text : "text-zinc-600"}
+                  className={counts[g.key] > 0 ? GROUP_TONE[g.key].text : "text-ink-muted"}
                 >
                   <span className="font-semibold">{counts[g.key]}</span> {g.label.toLowerCase()}
                 </span>
@@ -123,7 +123,7 @@ export function QueueView() {
             disabled={busy}
             variant="outline"
             size="sm"
-            className="border-zinc-700 bg-transparent text-zinc-300 hover:bg-zinc-900"
+            className="border-rule-strong bg-transparent text-ink hover:bg-paper-sunk"
           >
             <RotateCw className={refreshing ? "animate-spin" : ""} aria-hidden />
             {refreshing ? "Refreshing" : "Refresh"}
@@ -132,22 +132,22 @@ export function QueueView() {
       </div>
 
       {!data && isLoading ? (
-        <div className="py-16 text-center text-sm text-zinc-500">Loading queue…</div>
+        <div className="py-16 text-sm text-ink-muted">Loading queue…</div>
       ) : !data && error ? (
-        <div className="rounded-lg border border-dashed border-zinc-800 py-16 text-center">
-          <p className="text-sm text-zinc-400">Could not load the queue.</p>
-          <p className="mt-1 text-xs text-zinc-600">
+        <div className="border-y border-rule py-16">
+          <p className="text-sm font-semibold text-failed">✕ Could not load the queue.</p>
+          <p className="mt-1 text-sm text-ink-muted">
             {error instanceof Error ? error.message : "Try again in a moment."}
           </p>
         </div>
       ) : items.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-zinc-800 py-16 text-center">
-          <p className="text-sm text-zinc-400">No agent runs yet.</p>
-          <p className="mt-1 text-xs text-zinc-600">
+        <div className="border-y border-rule py-16">
+          <p className="text-sm font-semibold text-ink">No agent runs yet.</p>
+          <p className="mt-1 text-sm text-ink-muted">
             Start an agent from{" "}
             <Link
               href="/"
-              className="text-zinc-400 underline underline-offset-4 hover:text-zinc-200"
+              className="text-tick underline underline-offset-4"
             >
               Agents
             </Link>
@@ -181,7 +181,7 @@ export function QueueView() {
                   <section key={g.key} aria-labelledby={headingId} data-testid={headingId}>
                     <h2
                       id={headingId}
-                      className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-zinc-500"
+                      className="flex items-center gap-2 border-b border-ink pb-1.5 text-xs font-semibold uppercase tracking-[0.06em] text-ink-muted"
                     >
                       {list.length > 0 && (
                         <button
@@ -190,7 +190,7 @@ export function QueueView() {
                           aria-expanded={open}
                           aria-controls={listId}
                           aria-label={`${open ? "Collapse" : "Expand"} ${g.label}`}
-                          className="-ml-1 rounded p-0.5 text-zinc-500 hover:text-zinc-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500"
+                          className="-ml-1 rounded-[2px] p-0.5 text-ink-muted hover:text-ink"
                         >
                           <ChevronRight
                             aria-hidden
@@ -199,16 +199,18 @@ export function QueueView() {
                         </button>
                       )}
                       <span
-                        className={`size-2 rounded-full ${list.length > 0 ? GROUP_TONE[g.key].dot : "bg-zinc-700"}`}
-                      />
-                      <span
-                        className={list.length > 0 && g.key === "waiting" ? "text-amber-300" : ""}
+                        className={`inline-flex items-center gap-1 ${
+                          list.length > 0 ? GROUP_TONE[g.key].text : ""
+                        }`}
                       >
+                        <span aria-hidden className="font-mono">
+                          {GROUP_TONE[g.key].glyph}
+                        </span>
                         {g.label}
                       </span>
-                      <span className="font-mono text-zinc-600">{counts[g.key]}</span>
+                      <span className="font-mono text-ink-muted">{counts[g.key]}</span>
                       {list.length === 0 && (
-                        <span className="font-sans text-xs normal-case tracking-normal text-zinc-600">
+                        <span className="font-sans text-xs font-normal normal-case tracking-normal text-ink-muted">
                           · {g.empty}
                         </span>
                       )}
@@ -253,15 +255,15 @@ function LayoutSwitch({
     { key: "board", label: "Board", Icon: Columns3 },
   ];
   return (
-    <div role="group" aria-label="View" className="flex rounded-lg border border-zinc-700 p-0.5">
+    <div role="group" aria-label="View" className="flex rounded-[2px] border border-rule-strong p-0.5">
       {options.map(({ key, label, Icon }) => (
         <button
           key={key}
           type="button"
           aria-pressed={value === key}
           onClick={() => onChange(key)}
-          className={`inline-flex h-7 items-center gap-1.5 rounded-md px-2.5 text-[0.8rem] font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500 ${
-            value === key ? "bg-zinc-800 text-zinc-50" : "text-zinc-400 hover:text-zinc-200"
+          className={`inline-flex h-7 items-center gap-1.5 rounded-[2px] px-2.5 text-[0.8rem] font-semibold transition-colors ${
+            value === key ? "bg-ink text-on-ink" : "text-ink-muted hover:text-ink"
           }`}
         >
           <Icon aria-hidden className="size-3.5" />

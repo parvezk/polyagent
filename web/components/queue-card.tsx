@@ -4,7 +4,7 @@ import { useId, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { VendorIcon, VENDOR_META } from "@/components/vendor-icon";
+import { VendorMark } from "@/components/vendor-icon";
 import type { QueueItem } from "@/lib/queue";
 import { relativeTime } from "@/lib/view";
 
@@ -41,7 +41,6 @@ export function QueueCard({
   const replyId = useId();
 
   const waiting = item.group === "waiting";
-  const vendorLabel = VENDOR_META[item.vendor]?.label ?? item.vendor;
   const task = queueTaskLabel(item);
 
   async function sendReply() {
@@ -69,35 +68,33 @@ export function QueueCard({
 
   return (
     <li
-      className={`rounded-lg border transition-colors ${
-        waiting
-          ? "border-amber-400/25 bg-amber-400/[0.06] shadow-[inset_3px_0_0_0_rgb(251,191,36)]"
-          : "border-zinc-800 bg-zinc-900/30 hover:border-zinc-700"
+      className={`rounded-[4px] border bg-paper-raised transition-colors ${
+        waiting ? "border-ink" : "border-rule-strong"
       }`}
     >
       <div className={compact ? "flex flex-col gap-2.5 p-3" : "flex items-start gap-4 px-4 py-3"}>
         <div className="min-w-0 flex-1 space-y-1">
-          <div className="flex items-center gap-2 text-xs text-zinc-400">
-            <VendorIcon vendor={item.vendor} className="size-3.5 shrink-0" />
-            <span className="font-medium text-zinc-300">{vendorLabel}</span>
-            {item.repo && !compact && (
-              <>
-                <span className="text-zinc-700">·</span>
-                <span className="truncate font-mono text-zinc-500">{item.repo}</span>
-              </>
+          <div className="flex items-center gap-2 text-xs text-ink-muted">
+            <VendorMark vendor={item.vendor} />
+            {waiting && (
+              <span className="bg-highlight px-1.5 py-0.5 font-mono text-xs font-medium text-on-highlight">
+                <span aria-hidden>! </span>needs you
+              </span>
             )}
-            {!compact && <span className="text-zinc-700">·</span>}
+            {item.repo && !compact && (
+              <span className="truncate font-mono text-ink-muted">{item.repo}</span>
+            )}
             <span
-              className={`whitespace-nowrap font-mono text-zinc-500 ${compact ? "ml-auto" : ""}`}
+              className={`ml-auto whitespace-nowrap font-mono text-ink-muted tabular-nums`}
             >
               {relativeTime(item.lastUpdate)}
             </span>
           </div>
           {item.repo && compact && (
-            <div className="truncate font-mono text-[11px] text-zinc-500">{item.repo}</div>
+            <div className="truncate font-mono text-xs text-ink-muted">{item.repo}</div>
           )}
           <p
-            className={`${compact ? "line-clamp-2" : "truncate"} text-sm font-medium text-zinc-100`}
+            className={`${compact ? "line-clamp-2" : "truncate"} text-[15px] font-semibold leading-[21px] text-ink`}
             title={task}
           >
             {task}
@@ -105,7 +102,7 @@ export function QueueCard({
           {item.lastAgentMessage && (
             <p
               className={`${compact ? "line-clamp-1 text-xs" : "line-clamp-2 text-sm"} leading-relaxed ${
-                waiting ? "text-zinc-300" : "text-zinc-500"
+                waiting ? "text-ink" : "text-ink-muted"
               }`}
             >
               {item.lastAgentMessage}
@@ -123,8 +120,8 @@ export function QueueCard({
               onClick={() => setReplyOpen((v) => !v)}
               className={
                 waiting
-                  ? "bg-[#D97757] text-zinc-950 hover:bg-[#D97757]/85"
-                  : "border-zinc-700 bg-transparent text-zinc-300 hover:bg-zinc-800"
+                  ? "bg-ink text-on-ink hover:bg-ink/85"
+                  : "border-rule-strong bg-transparent text-ink hover:bg-paper-sunk"
               }
             >
               Reply
@@ -136,7 +133,7 @@ export function QueueCard({
               variant="outline"
               onClick={() => onSeeMore(item)}
               aria-label={`See more about ${task}`}
-              className="border-zinc-700 bg-transparent text-zinc-300 hover:bg-zinc-800"
+              className="border-rule-strong bg-transparent text-ink hover:bg-paper-sunk"
             >
               See more
             </Button>
@@ -146,7 +143,7 @@ export function QueueCard({
               href={item.outputUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex h-7 items-center rounded-[min(var(--radius-md),12px)] border border-zinc-700 px-2.5 text-[0.8rem] font-medium text-zinc-300 outline-none transition-colors hover:bg-zinc-800 focus-visible:ring-3 focus-visible:ring-ring/50"
+              className="inline-flex h-7 items-center rounded-[2px] border border-rule-strong px-2.5 text-[0.8rem] font-semibold text-ink transition-colors hover:bg-paper-sunk"
             >
               Open
             </a>
@@ -155,7 +152,7 @@ export function QueueCard({
             size="sm"
             variant="ghost"
             onClick={() => onDismiss(item.id)}
-            className="text-zinc-500 hover:text-zinc-200"
+            className="text-ink-muted hover:bg-paper-sunk hover:text-ink"
           >
             Dismiss
           </Button>
@@ -163,7 +160,7 @@ export function QueueCard({
       </div>
 
       {replyOpen && (
-        <div id={replyId} className="border-t border-zinc-800/80 px-4 py-3">
+        <div id={replyId} className="border-t border-rule px-4 py-3">
           <Textarea
             autoFocus
             value={draft}
@@ -179,10 +176,10 @@ export function QueueCard({
             }}
             placeholder="Write a reply"
             aria-label={`Reply to ${task}`}
-            className="min-h-14 border-zinc-800 bg-zinc-950 text-sm"
+            className="min-h-14 border-rule-strong bg-paper-raised text-sm"
           />
           <div className="mt-2 flex items-center justify-between">
-            <span className="text-xs text-zinc-600">
+            <span className="text-xs text-ink-muted">
               Enter to send. Shift+Enter for a new line.
             </span>
             <div className="flex gap-1.5">
@@ -190,7 +187,7 @@ export function QueueCard({
                 size="sm"
                 variant="ghost"
                 onClick={() => setReplyOpen(false)}
-                className="text-zinc-500 hover:text-zinc-200"
+                className="text-ink-muted hover:bg-paper-sunk hover:text-ink"
               >
                 Cancel
               </Button>
@@ -198,7 +195,7 @@ export function QueueCard({
                 size="sm"
                 onClick={() => void sendReply()}
                 disabled={sending || !draft.trim()}
-                className="bg-[#D97757] text-zinc-950 hover:bg-[#D97757]/85"
+                className="bg-ink text-on-ink hover:bg-ink/85"
               >
                 {sending ? "Sending…" : "Send"}
               </Button>

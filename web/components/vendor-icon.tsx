@@ -1,12 +1,12 @@
-// Cohesive vendor mark set. Brand-colored geometric glyphs (swap in exact brand
-// SVGs later). Covers active vendors (claude, jules) + planned (cursor, gemini).
+// Cohesive vendor mark set. Brand-colored geometric glyphs, drawn for a white tile
+// (see VendorMark). Swap in exact brand SVGs later. Covers active vendors (claude, jules) + planned (cursor, gemini).
 
 export type VendorKey = "claude" | "jules" | "cursor" | "gemini";
 
 export const VENDOR_META: Record<VendorKey, { label: string; color: string; hint: string }> = {
   claude: { label: "Claude", color: "#D97757", hint: "managed agent · general sandbox" },
   jules: { label: "Jules", color: "#6E56CF", hint: "async · repo → PR" },
-  cursor: { label: "Cursor", color: "#E4E4E7", hint: "cloud agent · repo → PR" },
+  cursor: { label: "Cursor", color: "#16191C", hint: "cloud agent · repo → PR" },
   gemini: { label: "Gemini", color: "#3B82F6", hint: "Antigravity · sandbox" },
 };
 
@@ -27,7 +27,7 @@ const CLAUDE_SPOKES = [
 ] as const;
 
 export function VendorIcon({ vendor, className = "size-4" }: { vendor: string; className?: string }) {
-  const color = VENDOR_META[vendor as VendorKey]?.color ?? "#A1A1AA";
+  const color = VENDOR_META[vendor as VendorKey]?.color ?? "#555C61";
 
   switch (vendor) {
     case "claude":
@@ -71,4 +71,37 @@ export function VendorIcon({ vendor, className = "size-4" }: { vendor: string; c
         </svg>
       );
   }
+}
+
+// A vendor's mark on a white tile, in both themes (design system: VendorMark).
+// Mark only: pass the vendor name as the accessible label. With `label`, the name sits beside it.
+export function VendorMark({
+  vendor,
+  size = "sm",
+  label = false,
+}: {
+  vendor: string;
+  size?: "sm" | "lg";
+  label?: boolean;
+}) {
+  const name = VENDOR_META[vendor as VendorKey]?.label ?? vendor;
+  const tile = (
+    <span
+      className={`inline-grid shrink-0 place-items-center rounded-[2px] border border-rule-strong bg-vendor-tile ${
+        size === "lg" ? "size-8" : "size-6"
+      }`}
+      title={label ? undefined : name}
+      role={label ? undefined : "img"}
+      aria-label={label ? undefined : name}
+    >
+      <VendorIcon vendor={vendor} className={size === "lg" ? "size-5" : "size-4"} />
+    </span>
+  );
+  if (!label) return tile;
+  return (
+    <span className="inline-flex items-center gap-2 font-semibold text-ink">
+      {tile}
+      {name}
+    </span>
+  );
 }
