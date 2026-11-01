@@ -22,9 +22,19 @@ interface QueueCardProps {
   item: QueueItem;
   onDismiss: (id: string) => Promise<void> | void;
   onReplied: () => void;
+  // Board columns are narrow: stack the actions under the message.
+  compact?: boolean;
+  // Opens the full session panel (board cards).
+  onSeeMore?: (item: QueueItem) => void;
 }
 
-export function QueueCard({ item, onDismiss, onReplied }: QueueCardProps) {
+export function QueueCard({
+  item,
+  onDismiss,
+  onReplied,
+  compact = false,
+  onSeeMore,
+}: QueueCardProps) {
   const [replyOpen, setReplyOpen] = useState(false);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
@@ -65,28 +75,36 @@ export function QueueCard({ item, onDismiss, onReplied }: QueueCardProps) {
           : "border-zinc-800 bg-zinc-900/30 hover:border-zinc-700"
       }`}
     >
-      <div className="flex items-start gap-4 px-4 py-3">
+      <div className={compact ? "flex flex-col gap-2.5 p-3" : "flex items-start gap-4 px-4 py-3"}>
         <div className="min-w-0 flex-1 space-y-1">
           <div className="flex items-center gap-2 text-xs text-zinc-400">
             <VendorIcon vendor={item.vendor} className="size-3.5 shrink-0" />
             <span className="font-medium text-zinc-300">{vendorLabel}</span>
-            {item.repo && (
+            {item.repo && !compact && (
               <>
                 <span className="text-zinc-700">·</span>
                 <span className="truncate font-mono text-zinc-500">{item.repo}</span>
               </>
             )}
-            <span className="text-zinc-700">·</span>
-            <span className="whitespace-nowrap font-mono text-zinc-500">
+            {!compact && <span className="text-zinc-700">·</span>}
+            <span
+              className={`whitespace-nowrap font-mono text-zinc-500 ${compact ? "ml-auto" : ""}`}
+            >
               {relativeTime(item.lastUpdate)}
             </span>
           </div>
-          <p className="truncate text-sm font-medium text-zinc-100" title={task}>
+          {item.repo && compact && (
+            <div className="truncate font-mono text-[11px] text-zinc-500">{item.repo}</div>
+          )}
+          <p
+            className={`${compact ? "line-clamp-2" : "truncate"} text-sm font-medium text-zinc-100`}
+            title={task}
+          >
             {task}
           </p>
           {item.lastAgentMessage && (
             <p
-              className={`line-clamp-2 text-sm leading-relaxed ${
+              className={`${compact ? "line-clamp-1 text-xs" : "line-clamp-2 text-sm"} leading-relaxed ${
                 waiting ? "text-zinc-300" : "text-zinc-500"
               }`}
             >
@@ -96,21 +114,34 @@ export function QueueCard({ item, onDismiss, onReplied }: QueueCardProps) {
         </div>
 
         <div className="flex shrink-0 items-center gap-1.5 pt-0.5">
-          <Button
-            size="sm"
-            variant={waiting ? "default" : "outline"}
-            aria-expanded={replyOpen}
-            aria-controls={replyId}
-            onClick={() => setReplyOpen((v) => !v)}
-            className={
-              waiting
-                ? "bg-[#D97757] text-zinc-950 hover:bg-[#D97757]/85"
-                : "border-zinc-700 bg-transparent text-zinc-300 hover:bg-zinc-800"
-            }
-          >
-            Reply
-          </Button>
-          {item.outputUrl && (
+          {(!compact || waiting) && (
+            <Button
+              size="sm"
+              variant={waiting ? "default" : "outline"}
+              aria-expanded={replyOpen}
+              aria-controls={replyId}
+              onClick={() => setReplyOpen((v) => !v)}
+              className={
+                waiting
+                  ? "bg-[#D97757] text-zinc-950 hover:bg-[#D97757]/85"
+                  : "border-zinc-700 bg-transparent text-zinc-300 hover:bg-zinc-800"
+              }
+            >
+              Reply
+            </Button>
+          )}
+          {compact && onSeeMore && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onSeeMore(item)}
+              aria-label={`See more about ${task}`}
+              className="border-zinc-700 bg-transparent text-zinc-300 hover:bg-zinc-800"
+            >
+              See more
+            </Button>
+          )}
+          {item.outputUrl && !compact && (
             <a
               href={item.outputUrl}
               target="_blank"
