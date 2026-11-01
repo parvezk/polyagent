@@ -4,6 +4,7 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
 import { Button } from "@/components/ui/button";
+import { Wordmark } from "@/components/wordmark";
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
@@ -19,12 +20,10 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-[70vh] flex-col items-center justify-center gap-6 text-center">
-      <div className="space-y-2">
-        <div className="text-2xl font-semibold">
-          <span className="text-[#D97757]">◆</span> PolyAgent
-        </div>
-        <p className="max-w-sm text-sm text-zinc-500">
+    <div className="flex min-h-[60vh] flex-col items-start justify-center gap-6">
+      <div className="space-y-3">
+        <Wordmark size="xl" />
+        <p className="max-w-md text-[15px] leading-[23px] text-ink-muted">
           Vendor-agnostic agent control plane. Sign in to dispatch and track cloud agents across
           vendors.
         </p>
@@ -32,12 +31,12 @@ export default function LoginPage() {
       <Button
         onClick={signIn}
         disabled={loading || !authConfigured}
-        className="bg-[#D97757] text-zinc-950 hover:bg-[#c8694a]"
+        className="bg-ink text-on-ink hover:bg-ink/85"
       >
         {loading ? "Redirecting…" : "Sign in with GitHub"}
       </Button>
       {!authConfigured && (
-        <p className="max-w-sm text-xs text-amber-300">
+        <p className="max-w-md bg-highlight px-2 py-1 text-xs text-on-highlight">
           Authentication is not configured. Add the Supabase environment variables to sign in.
         </p>
       )}

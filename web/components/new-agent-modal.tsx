@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { VendorIcon, VENDOR_META, type VendorKey } from "@/components/vendor-icon";
+import { VendorMark, VENDOR_META, type VendorKey } from "@/components/vendor-icon";
 import { useAgentForm, repoRequired } from "./use-agent-form";
 import { CLAUDE_MODELS, VENDORS } from "@/utils/constants";
 
@@ -30,14 +30,13 @@ export function NewAgentModal() {
 
   return (
     <Dialog open={form.open} onOpenChange={form.setOpen}>
-      <DialogTrigger render={<Button className="bg-[#D97757] text-zinc-950 hover:bg-[#c8694a]" />}>
-        + New Agent
+      <DialogTrigger render={<Button className="bg-ink text-on-ink hover:bg-ink/85" />}>
+        New agent
       </DialogTrigger>
-      {/* Lighter panel than the table — visual separation */}
-      <DialogContent className="border-zinc-700/60 bg-zinc-900 text-zinc-100 sm:max-w-[40rem]">
+      <DialogContent className="rounded-[2px] border border-ink bg-paper-raised text-ink shadow-none sm:max-w-[40rem]">
         <DialogHeader>
           <DialogTitle>New agent</DialogTitle>
-          <DialogDescription className="text-zinc-400">
+          <DialogDescription className="text-ink-muted">
             Launch a cloud agent on any connected vendor.
           </DialogDescription>
         </DialogHeader>
@@ -45,7 +44,7 @@ export function NewAgentModal() {
         <div className="space-y-4 py-2">
           {/* Vendor — icon radio tiles */}
           <div className="space-y-1.5">
-            <label id="vendor-label" className="text-xs font-medium text-zinc-400">
+            <label id="vendor-label" className="text-xs font-semibold uppercase tracking-[0.06em] text-ink-muted">
               Vendor
             </label>
             <div
@@ -81,15 +80,15 @@ export function NewAgentModal() {
                         vendorButtonRefs.current.get(prev)?.focus();
                       }
                     }}
-                    className={`flex flex-col items-center gap-1.5 rounded-lg border px-2 py-3 transition-all ${
+                    className={`flex flex-col items-center gap-1.5 rounded-[2px] border px-2 py-3 transition-colors ${
                       selected
-                        ? "border-[#D97757] bg-[#D97757]/10 ring-1 ring-[#D97757]/40"
-                        : "border-zinc-700/60 bg-zinc-950/40 hover:border-zinc-600"
+                        ? "border-ink bg-paper-sunk outline-2 outline-tick"
+                        : "border-rule-strong hover:bg-paper-sunk"
                     }`}
                   >
-                    <VendorIcon vendor={v} className="size-6" />
+                    <VendorMark vendor={v} size="lg" />
                     <span
-                      className={`text-xs font-medium ${selected ? "text-zinc-100" : "text-zinc-400"}`}
+                      className={`text-xs ${selected ? "font-semibold text-ink" : "text-ink-muted"}`}
                     >
                       {VENDOR_META[v].label}
                     </span>
@@ -97,25 +96,25 @@ export function NewAgentModal() {
                 );
               })}
             </div>
-            <p className="text-xs text-zinc-500">{VENDOR_META[form.vendor].hint}</p>
+            <p className="font-mono text-xs text-ink-muted">{VENDOR_META[form.vendor].hint}</p>
           </div>
 
           {/* Repo (+ branch) */}
           <div className="space-y-1.5">
-            <label htmlFor="repo" id="repo-label" className="text-xs font-medium text-zinc-400">
+            <label htmlFor="repo" id="repo-label" className="text-xs font-semibold uppercase tracking-[0.06em] text-ink-muted">
               Repo{" "}
-              {repoRequired(form.vendor) ? "" : <span className="text-zinc-600">(optional)</span>}
+              {repoRequired(form.vendor) ? "" : <span className="font-normal normal-case tracking-normal">(optional)</span>}
             </label>
             {form.vendor === "jules" ? (
               <Select value={form.repo} onValueChange={(v) => v && form.setRepo(v)}>
                 <SelectTrigger
                   id="repo"
                   aria-labelledby="repo-label"
-                  className="border-zinc-700 bg-zinc-950/50"
+                  className="border-rule-strong bg-paper-raised"
                 >
                   <SelectValue placeholder="Select a connected repo" />
                 </SelectTrigger>
-                <SelectContent className="border-zinc-700 bg-zinc-900 text-zinc-100">
+                <SelectContent className="rounded-[2px] border-rule-strong bg-paper-raised text-ink">
                   {form.repos.map((r) => (
                     <SelectItem key={r.repo} value={r.repo}>
                       {r.repo} {r.defaultBranch ? `(${r.defaultBranch})` : ""}
@@ -131,14 +130,14 @@ export function NewAgentModal() {
                   onChange={(e) => form.setRepo(e.target.value)}
                   placeholder="owner/repo"
                   aria-label="Repository owner and name"
-                  className="col-span-2 border-zinc-700 bg-zinc-950/50"
+                  className="col-span-2 border-rule-strong bg-paper-raised"
                 />
                 <Input
                   value={form.branch}
                   onChange={(e) => form.setBranch(e.target.value)}
                   placeholder="branch (optional)"
                   aria-label="Branch (optional)"
-                  className="border-zinc-700 bg-zinc-950/50"
+                  className="border-rule-strong bg-paper-raised"
                 />
               </div>
             )}
@@ -146,18 +145,18 @@ export function NewAgentModal() {
 
           {form.vendor === "claude" && (
             <div className="space-y-1.5">
-              <label htmlFor="model" id="model-label" className="text-xs font-medium text-zinc-400">
+              <label htmlFor="model" id="model-label" className="text-xs font-semibold uppercase tracking-[0.06em] text-ink-muted">
                 Model
               </label>
               <Select value={form.model} onValueChange={(v) => v && form.setModel(v)}>
                 <SelectTrigger
                   id="model"
                   aria-labelledby="model-label"
-                  className="border-zinc-700 bg-zinc-950/50"
+                  className="border-rule-strong bg-paper-raised"
                 >
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="border-zinc-700 bg-zinc-900 text-zinc-100">
+                <SelectContent className="rounded-[2px] border-rule-strong bg-paper-raised text-ink">
                   {CLAUDE_MODELS.map((m) => (
                     <SelectItem key={m} value={m}>
                       {m}
@@ -169,7 +168,7 @@ export function NewAgentModal() {
           )}
 
           <div className="space-y-1.5">
-            <label htmlFor="task" id="task-label" className="text-xs font-medium text-zinc-400">
+            <label htmlFor="task" id="task-label" className="text-xs font-semibold uppercase tracking-[0.06em] text-ink-muted">
               Task
             </label>
             <Textarea
@@ -178,7 +177,7 @@ export function NewAgentModal() {
               onChange={(e) => form.setPrompt(e.target.value)}
               placeholder="e.g. Identify any security/XSS flaws in the repo"
               aria-labelledby="task-label"
-              className="min-h-24 border-zinc-700 bg-zinc-950/50"
+              className="min-h-24 border-rule-strong bg-paper-raised"
             />
           </div>
         </div>
@@ -189,7 +188,7 @@ export function NewAgentModal() {
             disabled={
               form.submitting || !form.prompt.trim() || (repoRequired(form.vendor) && !form.repo)
             }
-            className="bg-[#D97757] text-zinc-950 hover:bg-[#c8694a]"
+            className="bg-ink text-on-ink hover:bg-ink/85"
           >
             {form.submitting ? "Launching…" : "Launch agent"}
           </Button>

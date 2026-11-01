@@ -31,11 +31,11 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-8">
       <VendorHero />
-      <div className="flex items-end justify-between">
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="space-y-2.5">
-          <h1 className="text-xl font-semibold">Coding Agents</h1>
+          <h1 className="text-[32px] font-bold leading-9 tracking-[-0.01em]">Coding agents</h1>
           <TelemetryStrip />
         </div>
         <div className="flex items-center gap-2">
@@ -44,7 +44,7 @@ export default function DashboardPage() {
             disabled={importing}
             variant="outline"
             size="sm"
-            className="border-zinc-700 bg-transparent text-zinc-300 hover:bg-zinc-900"
+            className="border-rule-strong bg-transparent text-ink hover:bg-paper-sunk"
           >
             {importing ? "Importing…" : "Import CLI sessions"}
           </Button>

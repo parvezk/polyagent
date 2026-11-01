@@ -65,10 +65,10 @@ describe("QueueView", () => {
 
     const headings = screen.getAllByRole("heading", { level: 2 });
     expect(headings.map((h) => h.textContent)).toEqual([
-      "Waiting on you1",
-      "Ready to review0· No finished work to review.",
-      "Running1",
-      "Failed0· No failed runs.",
+      "!Waiting on you1",
+      "✓Ready to review0· No finished work to review.",
+      "○Running1",
+      "✕Failed0· No failed runs.",
     ]);
     expect(useSWR).toHaveBeenCalledWith(
       "/api/queue",
