@@ -80,6 +80,57 @@ describe("GeminiAdapter", () => {
     expect(status.needsInput).toBe(false);
   });
 
+  it("getStatus maps budget_exceeded to failed", async () => {
+    const adapter = new GeminiAdapter(
+      fakePort({
+        getStatus: async (_id) => ({ status: "budget_exceeded" as GeminiInteractionStatus }),
+      }),
+    );
+    const status = await adapter.getStatus("gemini_1");
+
+    expect(status.status).toBe("failed");
+    expect(status.needsInput).toBe(false);
+  });
+
+  it("getStatus maps incomplete to completed", async () => {
+    const adapter = new GeminiAdapter(
+      fakePort({
+        getStatus: async (_id) => ({
+          status: "incomplete" as GeminiInteractionStatus,
+          summary: "Truncated answer",
+        }),
+      }),
+    );
+    const status = await adapter.getStatus("gemini_1");
+
+    expect(status.status).toBe("completed");
+    expect(status.summary).toBe("Truncated answer");
+  });
+
+  it("getStatus maps requires_continuation to needs_review", async () => {
+    const adapter = new GeminiAdapter(
+      fakePort({
+        getStatus: async (_id) => ({
+          status: "requires_continuation" as GeminiInteractionStatus,
+        }),
+      }),
+    );
+    const status = await adapter.getStatus("gemini_1");
+
+    expect(status.status).toBe("needs_review");
+  });
+
+  it("getStatus maps queued to running", async () => {
+    const adapter = new GeminiAdapter(
+      fakePort({
+        getStatus: async (_id) => ({ status: "queued" as GeminiInteractionStatus }),
+      }),
+    );
+    const status = await adapter.getStatus("gemini_1");
+
+    expect(status.status).toBe("running");
+  });
+
   it("getStatus returns unknown (does NOT throw) when port.getStatus throws", async () => {
     const adapter = new GeminiAdapter(
       fakePort({
