@@ -5,13 +5,17 @@ import { labelFromPrompt, withRepoInstruction } from "../utils/text.js";
 function mapStatus(s) {
   switch (s) {
     case "in_progress":
+    case "queued":
       return "running";
     case "completed":
+    case "incomplete": // truncated but finished (e.g. max_tokens)
       return "completed";
     case "failed":
     case "cancelled":
+    case "budget_exceeded":
       return "failed";
     case "requires_action":
+    case "requires_continuation": // needs continuation_token resume we do not auto-send
       return "needs_review"; // agent is waiting on the human (parallel to Jules AWAITING_*)
     default:
       return "unknown";

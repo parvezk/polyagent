@@ -5,6 +5,7 @@ export function normalizeSessionStatus(vendorStatus: string): SessionStatus {
     case "running": // claude, cursor
     case "rescheduling": // claude
     case "in_progress": // gemini
+    case "queued": // gemini (waiting to start)
     case "QUEUED": // jules
     case "PLANNING": // jules
     case "IN_PROGRESS": // jules
@@ -13,6 +14,8 @@ export function normalizeSessionStatus(vendorStatus: string): SessionStatus {
 
     case "idle": // claude
     case "requires_action": // gemini
+    // Gemini long-decode pause: PolyAgent does not auto-resume with continuation_token.
+    case "requires_continuation": // gemini
     case "AWAITING_PLAN_APPROVAL": // jules
     case "AWAITING_USER_FEEDBACK": // jules
       return "needs_review";
@@ -20,12 +23,15 @@ export function normalizeSessionStatus(vendorStatus: string): SessionStatus {
     case "terminated": // claude
     case "finished": // cursor
     case "completed": // gemini
+    // Finished with truncated output (e.g. max_tokens) — still terminal / reviewable.
+    case "incomplete": // gemini
     case "COMPLETED": // jules
       return "completed";
 
     case "error": // cursor
     case "cancelled": // cursor, gemini
     case "failed": // gemini
+    case "budget_exceeded": // gemini (token budget hit)
     case "FAILED": // jules
       return "failed";
 

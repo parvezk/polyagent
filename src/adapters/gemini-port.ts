@@ -6,15 +6,20 @@ import { GEMINI_API_BASE, ANTIGRAVITY_AGENT } from "../constants/gemini.js";
 
 /**
  * Status values returned by the Gemini Interactions API.
- * CONFIRMED: in_progress, completed, failed, requires_action.
- * ASSUMED: "cancelled" included defensively — not seen in docs but mirrors Jules/logical API.
+ * CONFIRMED via Interactions API + @google/genai InteractionStatus:
+ * in_progress, requires_action, completed, failed, cancelled, incomplete,
+ * requires_continuation, budget_exceeded, queued.
  */
 export type GeminiInteractionStatus =
   | "in_progress"
+  | "queued"
   | "completed"
+  | "incomplete"
   | "failed"
   | "cancelled"
-  | "requires_action";
+  | "budget_exceeded"
+  | "requires_action"
+  | "requires_continuation";
 
 export interface GeminiPort {
   /**
