@@ -17,12 +17,15 @@ export function normalizeSessionStatus(vendorStatus: string): SessionStatus {
     case "AWAITING_USER_FEEDBACK": // jules
       return "needs_review";
 
-    case "terminated": // claude
     case "finished": // cursor
     case "completed": // gemini
     case "COMPLETED": // jules
       return "completed";
 
+    // Claude: successful work goes idle, not terminated. terminated means an
+    // unrecoverable error — or an archive (ClaudeAdapter checks archived_at).
+    // Without archive metadata, prefer failed over a false "completed".
+    case "terminated": // claude
     case "error": // cursor
     case "cancelled": // cursor, gemini
     case "failed": // gemini

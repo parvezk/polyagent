@@ -1,8 +1,33 @@
 import type { AgentAdapter } from "./adapter.js";
-import type { AgentSession, AgentStatus, AgentOutput, DispatchRequest } from "../types.js";
+import type {
+  AgentSession,
+  AgentStatus,
+  AgentOutput,
+  DispatchRequest,
+  SessionStatus,
+} from "../types.js";
 import type { ClaudePort, ClaudeSessionStatus } from "./claude-port.js";
 import { labelFromPrompt, withRepoInstruction } from "../utils/text.js";
 import { normalizeSessionStatus } from "../utils/status.js";
+
+// ---------------------------------------------------------------------------
+// Claude status mapping
+// ---------------------------------------------------------------------------
+
+/**
+ * Map a Claude session status. Anthropic docs: successful work goes `idle`,
+ * not `terminated`. `terminated` is an unrecoverable error — unless the
+ * session was archived (`archived_at` set), which we treat as completed.
+ */
+export function mapClaudeSessionStatus(
+  status: ClaudeSessionStatus | string,
+  archivedAt?: string | null,
+): SessionStatus {
+  if (status === "terminated") {
+    return archivedAt ? "completed" : "failed";
+  }
+  return normalizeSessionStatus(status);
+}
 
 // ---------------------------------------------------------------------------
 // ClaudeAdapter
@@ -25,7 +50,7 @@ export class ClaudeAdapter implements AgentAdapter {
       id: created.sessionId,
       vendor: this.vendor,
       label: labelFromPrompt(req.prompt),
-      status: normalizeSessionStatus(created.status),
+      status: mapClaudeSessionStatus(created.status),
       dispatchedAt: new Date().toISOString(),
       outputUrl: req.repo ? `https://github.com/${req.repo}` : undefined,
       firstMessage: created.firstReply || undefined,
@@ -35,7 +60,7 @@ export class ClaudeAdapter implements AgentAdapter {
   async getStatus(sessionId: string): Promise<AgentStatus> {
     try {
       const result = await this.port.getStatus(sessionId);
-      const normalized = normalizeSessionStatus(result.status);
+      const normalized = mapClaudeSessionStatus(result.status, result.archivedAt);
       return {
         status: normalized,
         lastUpdate: new Date(),

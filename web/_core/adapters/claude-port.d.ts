@@ -8,6 +8,8 @@ export interface ClaudePort {
   getStatus(sessionId: string): Promise<{
     status: ClaudeSessionStatus;
     summary?: string;
+    /** Set when the session was archived; null/absent otherwise. */
+    archivedAt?: string | null;
   }>;
   /** V3: send a follow-up message to a running session. Implemented but not exercised by unit tests. */
   sendEvent(sessionId: string, message: string): Promise<void>;

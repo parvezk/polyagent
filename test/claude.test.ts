@@ -106,8 +106,20 @@ describe("ClaudeAdapter.getStatus — status mapping", () => {
     expect(result.needsInput).toBe(true);
   });
 
-  it('maps "terminated" -> "completed"', async () => {
-    const port = fakePort({ getStatus: vi.fn().mockResolvedValue({ status: "terminated" }) });
+  it('maps "terminated" without archive -> "failed"', async () => {
+    const port = fakePort({
+      getStatus: vi.fn().mockResolvedValue({ status: "terminated", archivedAt: null }),
+    });
+    const result = await new ClaudeAdapter(port).getStatus("sess_1");
+    expect(result.status).toBe("failed");
+  });
+
+  it('maps archived "terminated" -> "completed"', async () => {
+    const port = fakePort({
+      getStatus: vi
+        .fn()
+        .mockResolvedValue({ status: "terminated", archivedAt: "2026-11-04T10:00:00.000Z" }),
+    });
     const result = await new ClaudeAdapter(port).getStatus("sess_1");
     expect(result.status).toBe("completed");
   });

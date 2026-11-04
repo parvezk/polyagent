@@ -128,6 +128,7 @@ describe("realClaudePort", () => {
 
     await expect(realClaudePort("test-api-key").getStatus("session-123")).resolves.toEqual({
       status: "running",
+      archivedAt: null,
     });
     expect(anthropicSdk.retrieveSession).toHaveBeenCalledWith("session-123");
   });

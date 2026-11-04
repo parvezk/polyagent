@@ -71,7 +71,10 @@ export function realClaudePort(apiKey) {
     },
     async getStatus(sessionId) {
       const s = await client.beta.sessions.retrieve(sessionId);
-      return { status: s.status ?? "running" };
+      return {
+        status: s.status ?? "running",
+        archivedAt: s.archived_at ?? null,
+      };
     },
     async sendEvent(sessionId, message) {
       await client.beta.sessions.events.send(sessionId, {
