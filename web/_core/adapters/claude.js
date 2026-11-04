@@ -1,16 +1,19 @@
 import { labelFromPrompt, withRepoInstruction } from "../utils/text.js";
 // ---------------------------------------------------------------------------
 // Status mapping: Claude → normalized SessionStatus
+// Anthropic: successful work goes idle, not terminated. terminated is an
+// unrecoverable error unless archived_at is set (intentional archive).
 // ---------------------------------------------------------------------------
-function mapStatus(claudeStatus) {
+function mapStatus(claudeStatus, archivedAt) {
+  if (claudeStatus === "terminated") {
+    return archivedAt ? "completed" : "failed";
+  }
   switch (claudeStatus) {
     case "running":
     case "rescheduling":
       return "running";
     case "idle":
       return "needs_review";
-    case "terminated":
-      return "completed";
     default:
       return "unknown";
   }
@@ -44,7 +47,7 @@ export class ClaudeAdapter {
   async getStatus(sessionId) {
     try {
       const result = await this.port.getStatus(sessionId);
-      const normalized = mapStatus(result.status);
+      const normalized = mapStatus(result.status, result.archivedAt);
       return {
         status: normalized,
         lastUpdate: new Date(),

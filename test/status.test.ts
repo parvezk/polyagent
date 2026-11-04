@@ -20,13 +20,14 @@ describe("normalizeSessionStatus", () => {
   });
 
   it("normalizes completed statuses", () => {
-    expect(normalizeSessionStatus("terminated")).toBe("completed");
     expect(normalizeSessionStatus("finished")).toBe("completed");
     expect(normalizeSessionStatus("completed")).toBe("completed");
     expect(normalizeSessionStatus("COMPLETED")).toBe("completed");
   });
 
   it("normalizes failed statuses", () => {
+    // Claude terminated without archive metadata → failed (not a false completed).
+    expect(normalizeSessionStatus("terminated")).toBe("failed");
     expect(normalizeSessionStatus("error")).toBe("failed");
     expect(normalizeSessionStatus("cancelled")).toBe("failed");
     expect(normalizeSessionStatus("failed")).toBe("failed");

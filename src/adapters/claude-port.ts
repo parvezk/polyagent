@@ -18,7 +18,12 @@ export interface ClaudePort {
     modelId?: string;
   }): Promise<{ sessionId: string; firstReply: string; status: ClaudeSessionStatus }>;
 
-  getStatus(sessionId: string): Promise<{ status: ClaudeSessionStatus; summary?: string }>;
+  getStatus(sessionId: string): Promise<{
+    status: ClaudeSessionStatus;
+    summary?: string;
+    /** Set when the session was archived; null/absent otherwise. */
+    archivedAt?: string | null;
+  }>;
 
   /** V3: send a follow-up message to a running session. Implemented but not exercised by unit tests. */
   sendEvent(sessionId: string, message: string): Promise<void>;
@@ -103,7 +108,10 @@ export function realClaudePort(apiKey: string): ClaudePort {
 
     async getStatus(sessionId) {
       const s = await client.beta.sessions.retrieve(sessionId);
-      return { status: (s.status as ClaudeSessionStatus) ?? "running" };
+      return {
+        status: (s.status as ClaudeSessionStatus) ?? "running",
+        archivedAt: s.archived_at ?? null,
+      };
     },
 
     async sendEvent(sessionId, message) {
