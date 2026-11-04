@@ -12,13 +12,20 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
     return NextResponse.json({ error: "Session not found" }, { status: 404 });
   }
 
-  const adapter = buildAdapter(session.vendor);
+  // buildAdapter throws when a vendor's key is missing; still return stored metadata.
+  let adapter: ReturnType<typeof buildAdapter> | null = null;
+  try {
+    adapter = buildAdapter(session.vendor);
+  } catch {
+    adapter = null;
+  }
+
   let status = session.status;
   let summary: string | undefined;
   let messages: { role: string; content: string; timestamp: string }[] = [];
 
-  // ⚡ Bolt: Skip status polling for terminal sessions (they don't change state)
-  if (status !== "completed" && status !== "failed") {
+  // Skip status polling for terminal sessions (they don't change state)
+  if (adapter && status !== "completed" && status !== "failed") {
     try {
       const live = await adapter.getStatus(id);
       const liveLastUpdate = live.lastUpdate.toISOString();
@@ -35,15 +42,17 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
     }
   }
 
-  try {
-    const output = await adapter.getOutput(id);
-    messages = output.messages.map((m) => ({
-      role: m.role,
-      content: m.content,
-      timestamp: m.timestamp.toISOString(),
-    }));
-  } catch {
-    /* output may be unavailable */
+  if (adapter) {
+    try {
+      const output = await adapter.getOutput(id);
+      messages = output.messages.map((m) => ({
+        role: m.role,
+        content: m.content,
+        timestamp: m.timestamp.toISOString(),
+      }));
+    } catch {
+      /* output may be unavailable */
+    }
   }
 
   return NextResponse.json({

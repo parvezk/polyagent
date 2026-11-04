@@ -115,6 +115,33 @@ describe("GET /api/sessions/[id]", () => {
     });
   });
 
+  it("returns stored session metadata when the vendor adapter cannot be built", async () => {
+    getSessionMock.mockResolvedValue(storedSession);
+    buildAdapterMock.mockImplementation(() => {
+      throw new Error("No API key for jules. Set JULES_API_KEY in .env.local.");
+    });
+
+    const response = await getDetail();
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({
+      session: {
+        id: storedSession.id,
+        vendor: "jules",
+        label: storedSession.label,
+        status: storedSession.status,
+        dispatchedAt: storedSession.dispatched_at,
+        lastUpdate: storedSession.last_polled,
+        outputUrl: storedSession.output_url,
+      },
+      summary: undefined,
+      firstMessage: storedSession.first_message,
+      messages: [],
+    });
+    expect(patchSessionMock).not.toHaveBeenCalled();
+  });
+
   it("keeps stored status but still returns output when live status polling fails", async () => {
     const getStatus = vi.fn().mockRejectedValue(new Error("status unavailable"));
     const getOutput = vi.fn().mockResolvedValue({
