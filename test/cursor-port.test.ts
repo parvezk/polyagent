@@ -16,36 +16,48 @@ afterEach(() => {
 });
 
 describe("realCursorPort.getLatestRunStatus", () => {
-  it("reads durable agent metadata without using the streaming run APIs", async () => {
-    cursorSdk.get.mockResolvedValueOnce({
-      status: "finished",
-      summary: "Pull request opened",
+  it("reads the latest cloud run status without Agent.get or streaming getRun", async () => {
+    cursorSdk.listRuns.mockResolvedValueOnce({
+      items: [{ status: "finished", result: "Pull request opened" }],
     });
 
-    const status = await realCursorPort("cursor-api-key").getLatestRunStatus("agent-123");
+    const status = await realCursorPort("cursor-api-key").getLatestRunStatus("bc-agent-123");
 
     expect(status).toEqual({
       status: "finished",
       summary: "Pull request opened",
     });
-    expect(cursorSdk.get).toHaveBeenCalledOnce();
-    expect(cursorSdk.get).toHaveBeenCalledWith("agent-123", {
+    expect(cursorSdk.listRuns).toHaveBeenCalledOnce();
+    expect(cursorSdk.listRuns).toHaveBeenCalledWith("bc-agent-123", {
+      runtime: "cloud",
       apiKey: "cursor-api-key",
+      limit: 1,
     });
-    expect(cursorSdk.listRuns).not.toHaveBeenCalled();
+    expect(cursorSdk.get).not.toHaveBeenCalled();
     expect(cursorSdk.getRun).not.toHaveBeenCalled();
   });
 
-  it("defaults a missing SDK status to running", async () => {
-    cursorSdk.get.mockResolvedValueOnce({
-      summary: "Agent metadata is still initializing",
+  it("defaults to running when no runs exist yet", async () => {
+    cursorSdk.listRuns.mockResolvedValueOnce({ items: [] });
+
+    await expect(
+      realCursorPort("cursor-api-key").getLatestRunStatus("bc-agent-456"),
+    ).resolves.toEqual({
+      status: "running",
+      summary: undefined,
+    });
+  });
+
+  it("does not treat Agent.get-style name metadata as a finished run", async () => {
+    // Regression: cloud Agent.get mapper omits status and sets summary=name.
+    // Pollers must not keep finished agents stuck on running forever.
+    cursorSdk.listRuns.mockResolvedValueOnce({
+      items: [{ status: "finished", result: "Done" }],
     });
 
-    await expect(realCursorPort("cursor-api-key").getLatestRunStatus("agent-456")).resolves.toEqual(
-      {
-        status: "running",
-        summary: "Agent metadata is still initializing",
-      },
-    );
+    const status = await realCursorPort("key").getLatestRunStatus("bc-done");
+
+    expect(status.status).toBe("finished");
+    expect(status.summary).toBe("Done");
   });
 });
