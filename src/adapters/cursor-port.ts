@@ -76,22 +76,31 @@ export function realCursorPort(apiKey: string): CursorPort {
     },
 
     async getLatestRunStatus(agentId) {
-      // Use Agent.get (durable metadata: status + summary) rather than the
-      // streaming getRun — the latter emits an async TransformError that can
-      // escape the caller's try/catch.
+      // Agent.get / getCloudAgent only returns agent lifecycle metadata
+      // (ACTIVE|ARCHIVED → archived bool) and never a run execution status —
+      // cloud mapper even sets summary to the agent name. Reading the latest
+      // run via listRuns (limit 1) is durable and non-streaming (unlike getRun,
+      // whose stream can emit an async TransformError outside try/catch).
       const { Agent } = (await import("@cursor/sdk")) as unknown as {
         Agent: {
-          get(
+          listRuns(
             agentId: string,
-            opts?: { apiKey?: string },
-          ): Promise<{ status?: string; summary?: string }>;
+            opts?: { runtime?: "cloud"; apiKey?: string; limit?: number },
+          ): Promise<{
+            items: { status?: string; result?: string }[];
+          }>;
         };
       };
 
-      const info = await Agent.get(agentId, { apiKey });
+      const { items } = await Agent.listRuns(agentId, {
+        runtime: "cloud",
+        apiKey,
+        limit: 1,
+      });
+      const latest = items[0];
       return {
-        status: (info.status as CursorRunStatus) ?? "running",
-        summary: info.summary,
+        status: (latest?.status as CursorRunStatus) ?? "running",
+        summary: latest?.result,
       };
     },
 
