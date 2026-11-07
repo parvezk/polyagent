@@ -8,4 +8,11 @@ export const NextResponse = {
       headers,
     });
   },
+  redirect(url: string | URL, init?: number | ResponseInit): Response {
+    const status =
+      typeof init === "number" ? init : ((init as ResponseInit | undefined)?.status ?? 307);
+    const headers = new Headers(typeof init === "object" && init ? init.headers : undefined);
+    headers.set("Location", String(url));
+    return new Response(null, { status, headers });
+  },
 };
