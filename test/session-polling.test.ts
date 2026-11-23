@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   getSessionDetailRefreshInterval,
   getSessionsRefreshInterval,
+  isPersistableLiveStatus,
   isTerminalSessionStatus,
 } from "../web/lib/session-polling.js";
 
@@ -12,6 +13,12 @@ describe("session polling intervals", () => {
     expect(isTerminalSessionStatus("running")).toBe(false);
     expect(isTerminalSessionStatus("needs_review")).toBe(false);
     expect(isTerminalSessionStatus("unknown")).toBe(false);
+  });
+
+  it("rejects adapter unknown soft-fails as non-persistable", () => {
+    expect(isPersistableLiveStatus("unknown")).toBe(false);
+    expect(isPersistableLiveStatus(undefined)).toBe(false);
+    expect(isPersistableLiveStatus("needs_review")).toBe(true);
   });
 
   it("keeps polling the sessions list until every session is terminal", () => {
