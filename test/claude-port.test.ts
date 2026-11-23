@@ -33,22 +33,6 @@ vi.mock("@anthropic-ai/sdk", () => ({
   },
 }));
 
-function eventStream(events: unknown[]): AsyncIterable<unknown> {
-  return {
-    async *[Symbol.asyncIterator]() {
-      for (const event of events) yield event;
-    },
-  };
-}
-
-function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
-  let resolve!: (value: T) => void;
-  const promise = new Promise<T>((resolvePromise) => {
-    resolve = resolvePromise;
-  });
-  return { promise, resolve };
-}
-
 beforeEach(() => {
   vi.resetAllMocks();
   anthropicSdk.createAgent.mockResolvedValue({ id: "agent-123" });
@@ -62,31 +46,20 @@ afterEach(() => {
 });
 
 describe("realClaudePort", () => {
-  it("binds the created resources, subscribes before sending, and returns the first text reply", async () => {
+  it("binds resources, sends the prompt, and returns without waiting on the event stream", async () => {
     vi.spyOn(Date, "now").mockReturnValue(1_786_163_400_000);
-    const streamReady = deferred<AsyncIterable<unknown>>();
-    anthropicSdk.streamEvents.mockReturnValue(streamReady.promise);
 
-    const resultPromise = realClaudePort("test-api-key").createSession({
+    // A stream that never yields would hang forever if createSession awaited it.
+    anthropicSdk.streamEvents.mockReturnValue(
+      new Promise(() => {
+        /* never resolves */
+      }),
+    );
+
+    const result = await realClaudePort("test-api-key").createSession({
       prompt: "Fix the billing webhook\nInclude regression tests",
       modelId: "claude-sonnet-5",
     });
-
-    await vi.waitFor(() => expect(anthropicSdk.streamEvents).toHaveBeenCalledWith("session-789"));
-    expect(anthropicSdk.sendEvents).not.toHaveBeenCalled();
-
-    streamReady.resolve(
-      eventStream([
-        {
-          type: "agent.message",
-          content: [
-            { type: "text", text: "Ready " },
-            { type: "text", text: "to help." },
-          ],
-        },
-      ]),
-    );
-    const result = await resultPromise;
 
     expect(anthropicSdk.construct).toHaveBeenCalledWith({ apiKey: "test-api-key" });
     expect(anthropicSdk.createAgent).toHaveBeenCalledWith({
@@ -107,7 +80,6 @@ describe("realClaudePort", () => {
       environment_id: "environment-456",
       title: "Fix the billing webhook",
     });
-    expect(anthropicSdk.streamEvents).toHaveBeenCalledWith("session-789");
     expect(anthropicSdk.sendEvents).toHaveBeenCalledWith("session-789", {
       events: [
         {
@@ -116,9 +88,11 @@ describe("realClaudePort", () => {
         },
       ],
     });
+    // Streaming is for live observation; dispatch must not block on it.
+    expect(anthropicSdk.streamEvents).not.toHaveBeenCalled();
     expect(result).toEqual({
       sessionId: "session-789",
-      firstReply: "Ready to help.",
+      firstReply: "",
       status: "running",
     });
   });

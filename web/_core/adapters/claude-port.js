@@ -40,10 +40,12 @@ export function realClaudePort(apiKey) {
         environment_id: env.id,
         title: labelFromPrompt(prompt),
       });
-      // 4. Open the event stream for this session
-      const streamResponse = await client.beta.sessions.events.stream(session.id);
-      const stream = await streamResponse;
-      // 5. Send the user prompt
+      // 4. Kick off the task and return immediately.
+      // Do NOT open/await the event stream here: Managed Agents may take far
+      // longer than a serverless request budget to emit the first
+      // agent.message / status_idle. Waiting orphans a billed Claude session
+      // (create succeeded) when the HTTP handler times out before upsert.
+      // Events are queued server-side; first reply is available via later poll.
       await client.beta.sessions.events.send(session.id, {
         events: [
           {
@@ -52,22 +54,7 @@ export function realClaudePort(apiKey) {
           },
         ],
       });
-      // 6. Iterate stream, capture first agent.message, stop on idle
-      let firstReply = "";
-      for await (const event of stream) {
-        if (event.type === "agent.message") {
-          const msgEvent = event;
-          firstReply = msgEvent.content
-            .filter((b) => b.type === "text")
-            .map((b) => b.text ?? "")
-            .join("");
-          break;
-        }
-        if (event.type === "session.status_idle") {
-          break;
-        }
-      }
-      return { sessionId: session.id, firstReply, status: "running" };
+      return { sessionId: session.id, firstReply: "", status: "running" };
     },
     async getStatus(sessionId) {
       const s = await client.beta.sessions.retrieve(sessionId);
