@@ -1,0 +1,38 @@
+
+PolyAgent helps developers track, understand and approve coding agents across vendors in one place
+
+PolyAgent is the review layer for developers who run several coding agents at once across vendors and across platforms (local, cloud, desktop, mobile, sandbox, CI, browser agent)
+
+On “vendors will build it”: each vendor will build a queue for its own agents. You use four, so the case for PolyAgent is one queue across all of them.
+
+One precision point on your framing: you were not really building a better Jules, because PolyAgent does not write code. You were building the layer that makes Jules replaceable, and that is the stronger claim, because it survives Jules dying. I would use exactly that distinction if a reviewer asks.
+
+“A better Jules across vendors” and the human-in-the-loop idea fit together as one product:
+
+Agents from any vendor work on your repos, and some of them find their own tasks [PRO-ACTIVE SUGGESTIONS].
+One queue shows you what’s waiting and what each agent changed, so you can answer, approve or stop it.
+
+Here’s how I’d use the rest:
+* Human-in-the-loop is the core of the product.
+* Visualization and interface design are how you build the queue well, and why you specifically. My DeepViz and Synapse history makes that case without the labels.
+* [LONG-TERM] Research and design work belongs in one later sentence as where this grows, not the opening.
+
+[MUSE: The pitch line] PolyAgent is the layer that carries the artifact, the state, and the review gate across those tools, including the backward and sideways moves, design←dev and verify→design, that a pipeline does not model.
+
+Target: first user is the cross-phase builder, not the designer/PM angle.
+
+VISION: A cross-vendor coding dispatch and tracking today, the same control plane across research, design, build, and review as the vision, with PolyAgent as the human-in-the-loop arbitrator above the vendors.
+==========
+[CODEX] Your posts give us a concrete starting point: the coordination burden is knowing where your attention is needed and intervening before work drifts.
+Three pieces stand out:
+- The problem: multiple sessions meant mentally tracking assignments, checking progress, and finding agents waiting for input.
+- Your workaround: labelled tmux panes, status displays, and notifications made agent activity visible and reduced manual checking. That is tangible evidence.
+======
+You were keeping the whole project’s state in your head while individual tools managed their own pieces. Returning the next day meant rebuilding that mental picture before you could continue. Your account identifies several connected problems:
+What happened	What you had to do
+Design work lived in Flow, AI Studio and Midjourney	Carry the relevant work and instructions into coding tools
+Sessions ran across apps, tabs and terminals	Remember which session belonged to which task
+Work paused overnight, hit limits or failed	Reconstruct where you stopped and what each session needed
+Agents produced long responses	Read through them to find the information needed for your next decision
+
+The forgotten Enter example matters too. Work could appear underway while it was waiting for you. A useful product needs to make that state understandable wherever it has access to observe it. This gives us a stronger problem statement than tab switching alone: developers working across design and coding tools repeatedly reconstruct what is happening and what they need to do next. Tab switching and walls of text are how that burden shows up.

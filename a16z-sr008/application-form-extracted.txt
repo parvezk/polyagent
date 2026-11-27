@@ -1,0 +1,154 @@
+--- PAGE 1 ---
+Team
+We back exceptional founders. Tell us who’s building this and why you’re the team to make it happen.
+Required fields are marked with an asterisk (*).
+Are you full-time or part-time on the startup? *
+Number of Full-Time Founders *
+How many founders are working full-time on your startup?
+Founders are individuals with over 10% equity. If you’re part-time or not yet incorporated,
+enter ‘0’ and add all co-founders in the section below.
+Total FTE Employees *
+How many full-time equivalent employees (including founders) are currently at your startup?
+Part-time staff should be counted proportionally (e.g., two half-time employees = 1 FTE).
+Founder Details *
+Tell us who’s building this. Start with the CEO, then add any co-founders.
+CEO
+F u l l - t i m e
+P a r t - t i m e
+0
+1
+2
+3
+4
+5
+F U L L - T I M E  E Q U I V A L E N T  ( F T E )
+F I R S T  N A M E
+L A S T  N A M E
+E M A I L
+p x k o s e @ g m a i l . c o m
+
+--- PAGE 2 ---
+Include your country code, e.g. +1 415 555 2671. 0/50
+By checking this box, I agree that Speedrun may send me automated text messages about my Speedrun application at the
+number above, including status updates, deadline reminders, requests for materials, scheduling, and replies to my questions.
+Optional. You can submit your application without agreeing to text messages.
+Relevant experience *
+In a few sentences, highlight your most relevant professional, startup, or industry experience. Focus on track record, domain
+expertise, and past wins.
+0/1000
+How many years of professional experience do you have? *
+Are you technical enough to build the product end-to-end? *
+P H O N E  N U M B E R
+F O U N D E R  E X P E R I E N C E
+C O U N T R Y
+C I T Y
+C I T I Z E N S H I P
+C O L L E G E  /  U N I V E R S I T Y
+H I G H E S T  E D U C A T I O N ( O P T I O N A L )
+Y E A R S  O F  E X P E R I E N C E
+1. TEAM
+
+--- PAGE 3 ---
+Link to personal website, project portfolio, or side project.
+Tell us more about the team *
+How does the team know each other? Is there anyone else on the team? Why is this the best team to win? Do
+you have any key advisors? Etc
+0/1000
+Startup Details
+Help us understand your startup. The problem you're solving, your solution, and where you are today.
+Required fields are marked with an asterisk (*).
+Startup Name *
+Yes No
+L I N K E D I N  U R L
+G I T H U B  U R L ( O P T I O N A L )
+X  U R L ( O P T I O N A L )
+P O R T F O L I O  U R L ( O P T I O N A L )
+A d d  c o - f o u n d e r
+T E A M  D E S C R I P T I O N
+S T A R T U P  N A M E
+
+--- PAGE 4 ---
+Pitch your startup in one sentence. *
+What do you do and for whom? E.g. “AI-powered therapist for Gen Z”
+0/100
+Startup Description *
+What problem are you solving? What are you building?
+0/800
+Primary Category *
+Select the closest match for your startup. If none apply, choose 'Other'.
+Secondary Category (optional)
+If your startup fits more than one category, select a second category. If none apply, choose 'Other'.
+Where do you intend to build your startup? *
+O N E - L I N E R
+S T A R T U P  D E S C R I P T I O N
+B 2 B  /  E n t e r p r i s e  A p p l i c a t i o n s
+C o n s u m e r  A p p l i c a t i o n s
+D e e p  T e c h
+G a m i n g  /  E n t e r t a i n m e n t  S t u d i o
+I n f r a s t r u c t u r e  /  D e v  T o o l s
+H e a l t h c a r e
+G o v T e c h
+C ry p t o
+O t h e r
+B 2 B  /  E n t e r p r i s e  A p p l i c a t i o n s
+C o n s u m e r  A p p l i c a t i o n s
+D e e p  T e c h
+G a m i n g  /  E n t e r t a i n m e n t  S t u d i o
+I n f r a s t r u c t u r e  /  D e v  T o o l s
+H e a l t h c a r e
+G o v T e c h
+C ry p t o
+O t h e r
+C O U N T R Y
+C I T Y
+
+--- PAGE 5 ---
+When was your startup founded? *
+Company Website (optional)
+E.g. https://yourcompany.com
+Anything else we should know? (optional)
+If there’s something that doesn’t fit elsewhere, drop it here.
+0/1000
+Additional Information
+Team Video (MP4) Optional
+Pitch Deck (PDF) Optional
+Traction Optional
+Funding History Optional
+Active Fundraising Round Optional
+Y E A R
+M O N T H
+W E B S I T E  U R L ( O P T I O N A L )
+A D D I T I O N A L  I N F O R M A T I O N ( O P T I O N A L )
+S h o w  U s  M o r e
+A n y  a d d i t i o n a l  i n f o r m a t i o n  y o u  s h a r e  w i t h  u s  a d d s  i m p o r t a n t  c o n t e x t  t h a t  w e  r e v i e w  a n d  s i g n i f i c a n t l y
+i m p r o v e s  t h e  s t r e n g t h  o f  y o u r  a p p l i c a t i o n .  P l e a s e  s h a r e  t h e s e  b e l o w .
+
+--- PAGE 6 ---
+Referral Optional
+Where did you learn about speedrun? Required
+Let us know how you found out about speedrun. X, event, friend, etc.
+Provide the name, handle, post, event, etc.
+S O U R C E
+A D D I T I O N A L  I N F O ( O P T I O N A L )
+S u b m i t  a p p l i c a t i o n
+Founders
+Capital
+Customers
+Talent
+Residency
+FAQ
+Apply to speedrun
+Log in
+Investors
+Demo day & investor
+network
+Refer a founder
+Request an invitation
+Log in
+Partners
+Buyers, partners & advisors
+Follow us
+Substack
+LinkedIn
+X
+Privacy Policy Terms of Use Disclosures Speedrun Talent Network © 2026 Andreessen Horowitz
