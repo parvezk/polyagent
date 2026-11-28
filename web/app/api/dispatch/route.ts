@@ -26,14 +26,30 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Jules requires a repo (owner/repo)" }, { status: 400 });
   }
 
+  let session;
   try {
-    const session = await buildAdapter(vendor).dispatch({ prompt, repo, model });
-    await upsertSession(toDbRow(session, userId));
-    return NextResponse.json({ session });
+    session = await buildAdapter(vendor).dispatch({ prompt, repo, model });
   } catch (err) {
     return NextResponse.json(
       { error: err instanceof Error ? err.message : String(err) },
       { status: 502 },
     );
   }
+
+  // Vendor session already exists (and may be billed). If persistence fails, still
+  // return the session id so the client can surface it — dropping the id orphans
+  // a live cloud agent with no recovery path from the UI.
+  try {
+    await upsertSession(toDbRow(session, userId));
+  } catch (err) {
+    return NextResponse.json(
+      {
+        error: err instanceof Error ? err.message : String(err),
+        session,
+      },
+      { status: 502 },
+    );
+  }
+
+  return NextResponse.json({ session });
 }
