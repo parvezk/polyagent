@@ -33,3 +33,12 @@ export function normalizeSessionStatus(vendorStatus: string): SessionStatus {
       return "unknown";
   }
 }
+
+/**
+ * Adapters catch vendor blips and return `unknown` instead of throwing.
+ * Pollers must not persist that sentinel — otherwise a transient error
+ * clobbers real states like `needs_review` / `running`.
+ */
+export function isPersistableLiveStatus(status: SessionStatus): boolean {
+  return status !== "unknown";
+}

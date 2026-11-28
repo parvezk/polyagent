@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { buildAdapter } from "@/lib/core";
 import { getSession, patchSession } from "@/lib/sessions-store";
+import { isPersistableLiveStatus } from "@/lib/session-polling";
 
 export const dynamic = "force-dynamic";
 
@@ -21,14 +22,17 @@ export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> 
   if (status !== "completed" && status !== "failed") {
     try {
       const live = await adapter.getStatus(id);
-      const liveLastUpdate = live.lastUpdate.toISOString();
-      status = live.status;
-      summary = live.summary;
-      if (
-        status !== session.status ||
-        liveLastUpdate !== (session.last_polled ?? session.dispatched_at)
-      ) {
-        await patchSession(id, { status, last_polled: liveLastUpdate });
+      // Adapters return "unknown" on blips instead of throwing — keep last-known.
+      if (isPersistableLiveStatus(live.status)) {
+        const liveLastUpdate = live.lastUpdate.toISOString();
+        status = live.status;
+        summary = live.summary;
+        if (
+          status !== session.status ||
+          liveLastUpdate !== (session.last_polled ?? session.dispatched_at)
+        ) {
+          await patchSession(id, { status, last_polled: liveLastUpdate });
+        }
       }
     } catch {
       /* keep last-known */

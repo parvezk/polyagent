@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { buildAdapter } from "@/lib/core";
 import { listSessions, patchSession, type DbSession } from "@/lib/sessions-store";
+import { isPersistableLiveStatus } from "@/lib/session-polling";
 import pLimit from "p-limit";
 
 export const dynamic = "force-dynamic"; // always fresh; never cache live status
@@ -31,25 +32,32 @@ export async function GET() {
         if (status !== "completed" && status !== "failed") {
           try {
             const live = await buildAdapter(s.vendor).getStatus(s.id);
-            const liveLastUpdate = live.lastUpdate.toISOString();
 
-            // Persist only status changes or the first successful poll timestamp.
-            if (status !== live.status || s.last_polled === null) {
-              status = live.status;
-              lastUpdate = liveLastUpdate;
-              summary = live.summary;
-
-              patchPromises.push(
-                (async () => {
-                  try {
-                    await patchSession(s.id, { status, last_polled: lastUpdate });
-                  } catch (e) {
-                    console.error("Failed to patch session:", e);
-                  }
-                })(),
-              );
+            // Adapters return "unknown" on blips instead of throwing. Treating that
+            // as a real status would clobber needs_review / running in the DB.
+            if (!isPersistableLiveStatus(live.status)) {
+              // keep last-known status
             } else {
-              summary = live.summary;
+              const liveLastUpdate = live.lastUpdate.toISOString();
+
+              // Persist only status changes or the first successful poll timestamp.
+              if (status !== live.status || s.last_polled === null) {
+                status = live.status;
+                lastUpdate = liveLastUpdate;
+                summary = live.summary;
+
+                patchPromises.push(
+                  (async () => {
+                    try {
+                      await patchSession(s.id, { status, last_polled: lastUpdate });
+                    } catch (e) {
+                      console.error("Failed to patch session:", e);
+                    }
+                  })(),
+                );
+              } else {
+                summary = live.summary;
+              }
             }
           } catch {
             // keep last-known status

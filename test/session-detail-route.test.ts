@@ -148,6 +148,28 @@ describe("GET /api/sessions/[id]", () => {
     expect(getOutput).toHaveBeenCalledWith(storedSession.id);
   });
 
+  it("does not persist adapter unknown soft-fails over the stored status", async () => {
+    const getStatus = vi.fn().mockResolvedValue({
+      status: "unknown",
+      lastUpdate: new Date("2026-08-01T10:15:00.000Z"),
+      needsInput: false,
+    });
+    const getOutput = vi.fn().mockResolvedValue({
+      sessionId: storedSession.id,
+      vendor: storedSession.vendor,
+      messages: [],
+    });
+    getSessionMock.mockResolvedValue({ ...storedSession, status: "needs_review" });
+    buildAdapterMock.mockReturnValue({ getStatus, getOutput });
+
+    const response = await getDetail();
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.session.status).toBe("needs_review");
+    expect(patchSessionMock).not.toHaveBeenCalled();
+  });
+
   it("returns updated status with empty messages when output is unavailable", async () => {
     const getStatus = vi.fn().mockResolvedValue({
       status: "completed",

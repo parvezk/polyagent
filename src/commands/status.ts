@@ -6,6 +6,7 @@ import { buildAdapter } from "../registry.js";
 import type { AgentSession } from "../types.js";
 import { relativeTime, renderTable, truncate, type StatusRow } from "../format.js";
 import { banner } from "../utils/banner.js";
+import { isPersistableLiveStatus } from "../utils/status.js";
 
 const LABEL_MAX = 40;
 const WATCH_INTERVAL_MS = 4000;
@@ -24,9 +25,13 @@ async function collectRows(store: StateStore, sessionId?: string): Promise<Statu
       if (status !== "completed" && status !== "failed") {
         try {
           const live = await buildAdapter(s.vendor).getStatus(s.id);
-          status = live.status;
-          updatedAt = live.lastUpdate.toISOString();
-          toSave.push({ ...s, status: live.status, lastPolled: updatedAt });
+          // Adapters return "unknown" on vendor blips instead of throwing — do not
+          // persist or display that sentinel over the last real status.
+          if (isPersistableLiveStatus(live.status)) {
+            status = live.status;
+            updatedAt = live.lastUpdate.toISOString();
+            toSave.push({ ...s, status: live.status, lastPolled: updatedAt });
+          }
         } catch {
           // keep last-known status
         }

@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   getStatus: vi.fn(),
   sessions: [] as AgentSession[],
   upsert: vi.fn(),
+  upsertMany: vi.fn(),
 }));
 
 vi.mock("../src/config.js", () => ({
@@ -20,6 +21,7 @@ vi.mock("../src/state.js", () => ({
   StateStore: vi.fn().mockImplementation(() => ({
     list: () => mocks.sessions,
     upsert: mocks.upsert,
+    upsertMany: mocks.upsertMany,
   })),
 }));
 
@@ -59,6 +61,29 @@ describe("statusCommand terminal polling", () => {
 
     expect(mocks.buildAdapter).not.toHaveBeenCalled();
     expect(mocks.getStatus).not.toHaveBeenCalled();
+    expect(mocks.upsert).not.toHaveBeenCalled();
+    expect(mocks.upsertMany).not.toHaveBeenCalled();
+  });
+
+  it("does not persist adapter unknown soft-fails over last-known status", async () => {
+    mocks.sessions = [
+      {
+        id: "awaiting-1",
+        vendor: "jules",
+        status: "needs_review",
+        dispatchedAt: "2026-06-23T00:00:00.000Z",
+        lastPolled: "2026-06-23T00:02:00.000Z",
+      },
+    ];
+    mocks.getStatus.mockResolvedValue({
+      status: "unknown",
+      lastUpdate: new Date("2026-06-23T00:03:00.000Z"),
+    });
+
+    await statusCommand();
+
+    expect(mocks.getStatus).toHaveBeenCalledWith("awaiting-1");
+    expect(mocks.upsertMany).not.toHaveBeenCalled();
     expect(mocks.upsert).not.toHaveBeenCalled();
   });
 });

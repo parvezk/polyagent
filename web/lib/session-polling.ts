@@ -11,6 +11,15 @@ export function isTerminalSessionStatus(status: SessionStatus | undefined): bool
   return status === "completed" || status === "failed";
 }
 
+/**
+ * Adapters catch vendor blips and return `unknown` instead of throwing.
+ * Pollers must not persist that sentinel — otherwise a transient error
+ * clobbers real states like `needs_review` / `running`.
+ */
+export function isPersistableLiveStatus(status: SessionStatus | undefined): boolean {
+  return status !== undefined && status !== "unknown";
+}
+
 export function getSessionsRefreshInterval(
   currentData: { sessions?: SessionStatusLike[] } | undefined,
 ): number {

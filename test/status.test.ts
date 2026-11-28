@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { normalizeSessionStatus } from "../src/utils/status.js";
+import { isPersistableLiveStatus, normalizeSessionStatus } from "../src/utils/status.js";
 
 describe("normalizeSessionStatus", () => {
   it("normalizes running statuses", () => {
@@ -36,5 +36,18 @@ describe("normalizeSessionStatus", () => {
   it("returns unknown for unmapped statuses", () => {
     expect(normalizeSessionStatus("some_unknown_status")).toBe("unknown");
     expect(normalizeSessionStatus("")).toBe("unknown");
+  });
+});
+
+describe("isPersistableLiveStatus", () => {
+  it("rejects the adapter soft-fail sentinel", () => {
+    expect(isPersistableLiveStatus("unknown")).toBe(false);
+  });
+
+  it("accepts real session statuses", () => {
+    expect(isPersistableLiveStatus("running")).toBe(true);
+    expect(isPersistableLiveStatus("needs_review")).toBe(true);
+    expect(isPersistableLiveStatus("completed")).toBe(true);
+    expect(isPersistableLiveStatus("failed")).toBe(true);
   });
 });
